@@ -27,6 +27,7 @@ namespace CD2sol
         {
             IntList = _intList;
             MinChainLenght = _minChainLenght;
+
             maxChainLenght = _intList.Count / 2;
             RangeNumber = _RangeNumber;
             Window = _Window;
