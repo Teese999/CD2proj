@@ -37,7 +37,7 @@ namespace CD2sol
         }
 
 
-        public Chain(int Length, int StartIndex, Dictionary<int, int> IntListWithIndex)
+        public Chain(int Length, int StartIndex, List<int> IntListWithIndex)
         {
             ChainEqualityComparer ChainComparer = new();
             Id = Guid.NewGuid();

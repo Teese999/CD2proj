@@ -14,8 +14,6 @@ namespace CD2sol
     {
         private MainWindowViewModel Window;
         private List<int> IntList { get; set; }
-        private Dictionary<int, int> IntListWithIndex { get; set; } = new();
-        private Dictionary<int, List<int>> uniqueValuesWithIndexes = new();
         private Dictionary<Chain, List<Chain>> ChainsMinLength = new();
         private Dictionary<List<int>, List<Chain>> BiggerThenMinLengthChains = new(new ListIntEqualityComparer());
         private int MinChainLenght;
@@ -23,6 +21,7 @@ namespace CD2sol
         private int RangeNumber;
         private List<Chain> BestChains = new();
         private StatisticLocal Stats = new();
+        private List<Task> WaitingList = new();
         public OneRangeConvert(List<int> _intList, int _minChainLenght, int _RangeNumber, MainWindowViewModel _Window)
         {
             IntList = _intList;
@@ -36,114 +35,154 @@ namespace CD2sol
         public async Task<(int, string, StatisticLocal)> Start()
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            GetListViwthIndex(IntList, IntListWithIndex);
-            GetUniqueValuesWithIndexes(uniqueValuesWithIndexes);
+            Debug.WriteLine($"{RangeNumber} - STARTED");
+
+
             ChainsMinLength = GetDictUniqueChainsMinLength(MinChainLenght);
-            Parallel.ForEach(ChainsMinLength, x => ChainProgression(x.Value));
-
-            //GC.Collect();
-            //GC.WaitForPendingFinalizers();
-            //ChainProgression(ChainsMinLength.First().Value);
-
+            _ = Parallel.ForEach(ChainsMinLength, x => ChainProgression(x.Value));
+            Task.WaitAll(WaitingList.ToArray());
+            ChainsFieldsRecount();
+            GetBestChains();
 
             watch.Stop();
-            Debug.WriteLine(watch.ElapsedMilliseconds);
+
+            Debug.WriteLine($"{watch.ElapsedMilliseconds}  -  {RangeNumber} ENDED");
+
+            Window.ProgressBarCurrentValue++;
+            Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
+
             return await Task.Run(() => (RangeNumber, GetString(), Stats));
         }
-
-        private async void ChainProgression(List<Chain> chainList)
+        private void GetBestChains()
         {
-
-            Dictionary<List<int>, List<Chain>> dict = new(new ListIntEqualityComparer());
-
-            foreach (var item in chainList)
+            List<List<int>> keys = BiggerThenMinLengthChains.Keys.OrderByDescending(x => x.Count).ToList();
+            foreach (List<int> bigChainValue in keys)
             {
-                if (item.NextChain == null || item.Length + 1 > maxChainLenght)
+                List<Chain> bigChainList = BiggerThenMinLengthChains[bigChainValue];
+                foreach (Chain BigChain in bigChainList)
                 {
-
-                    return;
-
-                }
-                else
-                {
-                    if (!dict.TryAdd(item.NextChain, new() { item }))
+                    foreach (List<int> smallChainValue in keys.Where(x => x.Count < bigChainValue.Count).ToList())
                     {
+                        List<Chain> smallChainList = BiggerThenMinLengthChains[smallChainValue];
+                        foreach (Chain smallChain in smallChainList)
+                        {
 
-                        dict[item.NextChain].Add(item);
+                            if (smallChain.FirstElementIndex >= BigChain.FirstElementIndex & smallChain.LastElementIndex <= BigChain.LastElementIndex)
+                            {
+
+                                smallChain.ToDel = true;
+
+
+
+                            }
+
+                        }
                     }
                 }
 
             }
+            foreach (var item in BiggerThenMinLengthChains)
+            {
+                item.Value.RemoveAll(x => x.ToDel == true);
+            }
+            foreach (var item in BiggerThenMinLengthChains.Where(x => x.Value.Count != 0))
+            {
+                foreach (var item2 in item.Value)
+                {
+                    BestChains.Add(item2);
+                }
+            }
+        }
+        private void ChainsFieldsRecount()
+        {
 
+            _ = Parallel.ForEach(ChainsMinLength, x => BiggerThenMinLengthChains.Add(x.Key.Values, x.Value));
+            ChainsMinLength = null;
+            BiggerThenMinLengthChains = BiggerThenMinLengthChains.OrderBy(x => x.Key.Count).ToDictionary(x => x.Key, x => x.Value);
+            _ = Parallel.ForEach(BiggerThenMinLengthChains, x => { x.Value.OrderBy(z => z.FirstElementIndex).ToList(); });
 
+            _ = Parallel.ForEach(BiggerThenMinLengthChains, x =>
+             {
+                 var currentKey = x.Key;
+                 for (int i = 1; i < BiggerThenMinLengthChains[currentKey].Count; i++)
+                 {
+                     var currentChain = BiggerThenMinLengthChains[currentKey][i];
+                     int firstItemsInBites = 0;
+                     foreach (var item in BiggerThenMinLengthChains[currentKey][i].Values)
+                     {
+                         firstItemsInBites += BitCounter(item);
+                     }
 
+                     int firstItemRangeInBites = BitCounter(currentChain.FirstElementIndex - BiggerThenMinLengthChains[currentKey][i - 1].LastElementIndex);
+                     int firstItemLengthInBites = BitCounter(currentChain.Values.Count - 1);
+                     currentChain.Economy = firstItemsInBites - firstItemRangeInBites - firstItemLengthInBites;
+                     currentChain.PrevAddresRange = currentChain.FirstElementIndex - BiggerThenMinLengthChains[currentKey][i - 1].LastElementIndex;
+                     currentChain.PrevAddresLength = currentChain.Values.Count;
+                 }
+                 BiggerThenMinLengthChains[currentKey].Remove(BiggerThenMinLengthChains[currentKey][0]);
 
+             });
+        }
+        static public int BitCounter(int value)
+        {
+            string binary = Convert.ToString(value, 2);
+            int ans = binary.Length;
+            return ans;
+        }
+        private async Task ChainProgression(List<Chain> chainList)
+        {
+            Dictionary<List<int>, List<Chain>> dict = new(new ListIntEqualityComparer());
+            foreach (var item in chainList)
+            {
+                if (item.NextChain != null & item.Length + 1 <= maxChainLenght)
+                {
+                    if (!dict.TryAdd(item.NextChain, new() { new Chain(item.Values.Count + 1, item.FirstElementIndex, IntList) }))
+                    {
+
+                        dict[item.NextChain].Add(new Chain(item.Values.Count + 1, item.FirstElementIndex, IntList));
+                    }
+                }
+            }
             List<List<int>> ValuesCountBiggerThenOne = dict.Where(x => x.Value.Count < 2).Select(x => x.Key).ToList();
             if (ValuesCountBiggerThenOne.Count == chainList.Count)
             {
                 return;
             }
-            List<Chain> clearedDict = new();
+
 
             foreach (var item in ValuesCountBiggerThenOne)
             {
-                dict.Remove(item);
+
+                _ = dict.Remove(item);
 
             }
-            clearedDict = dict.SelectMany(x => x.Value).ToList();
-            clearedDict = clearedDict.OrderBy(x => x.FirstElementIndex).ToList();
 
-            Dictionary<Chain, List<Chain>> thisChainsListToRecursion = new(new ChainEqualityComparer());
-            foreach (var item in clearedDict)
+            foreach (var item in dict)
             {
-
-
-                Chain tmpChain = new(item.Length + 1, item.FirstElementIndex, IntListWithIndex);
-                if (!thisChainsListToRecursion.TryAdd(tmpChain, new() { tmpChain }))
-                {
-                    thisChainsListToRecursion[tmpChain].Add(tmpChain);
-                }
                 lock (BiggerThenMinLengthChains)
                 {
 
-                    if (!BiggerThenMinLengthChains.TryAdd(tmpChain.Values, new() { tmpChain }))
+                    if (!BiggerThenMinLengthChains.TryAdd(item.Key, item.Value))
                     {
-                        BiggerThenMinLengthChains[tmpChain.Values].Add(tmpChain);
+                        BiggerThenMinLengthChains[item.Key].AddRange(item.Value);
                     }
                 }
-
-
-
-
             }
-            await Task.Run(() => { ChainProgression(thisChainsListToRecursion.SelectMany(x => x.Value).ToList()); });
 
-        }
-        private void GetListViwthIndex(List<int> intlist, Dictionary<int, int> intlistDict)
-        {
-            for (int i = 0; i < intlist.Count; i++)
+            Task tsk = new(() => { Task task = ChainProgression(dict.SelectMany(x => x.Value).ToList()); });
+            lock (WaitingList)
             {
-                intlistDict.Add(i, IntList[i]);
+                WaitingList.Add(tsk);
             }
+            tsk.Start();
         }
-        private void GetUniqueValuesWithIndexes(Dictionary<int, List<int>> uniquevaluesDict)
-        {
-            List<int> tmplist = IntList.Distinct().ToList();
-            foreach (var item in tmplist)
-            {
-                uniquevaluesDict.Add(item, new List<int>());
-            }
-            for (int i = 0; i < IntList.Count; i++)
-            {
-                uniquevaluesDict[IntList[i]].Add(i);
-            }
-        }
+
         private Dictionary<Chain, List<Chain>> GetDictUniqueChainsMinLength(int chainLength)
         {
             Dictionary<Chain, List<Chain>> tmpDict = new(new ChainEqualityComparer());
             for (int i = 0; i < IntList.Count - (chainLength - 1); i++)
             {
-                Chain newChain = new(chainLength, i, IntListWithIndex);
+                Chain newChain = new(chainLength, i, IntList);
                 if (!tmpDict.TryAdd(newChain, new() { newChain }))
                 {
                     tmpDict[newChain].Add(newChain);
@@ -185,10 +224,14 @@ namespace CD2sol
             }
             Window.ProgressBarCurrentValue++;
             Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
-            Debug.WriteLine("--------------ANSWER--------------");
-            Debug.WriteLine(ans);
-            Debug.WriteLine("--------------ANSWER--------------");
+            //Debug.WriteLine("--------------ANSWER--------------");
+            //Debug.WriteLine(ans);
+            //Debug.WriteLine("--------------ANSWER--------------");
             return ans;
+        }
+        ~OneRangeConvert()
+        {
+            Debug.WriteLine($"{RangeNumber} - DELETED");
         }
     }
 }
