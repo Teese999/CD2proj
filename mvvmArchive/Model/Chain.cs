@@ -8,7 +8,6 @@ namespace CD2sol
 {
     class Chain
     {
-        private static int FinalizeCount { get; set; } = 0;
         public Guid Id { get; set; }
         public int Length { get; set; }
         public int FirstElementIndex { get; set; }
@@ -93,11 +92,6 @@ namespace CD2sol
                 vals += item.ToString() + " ";
             }
             return $"Lenght - {Length} indexes: {FirstElementIndex} - {LastElementIndex} Enterindex - {EnterIndex} values- {vals} Economy - {Economy}";
-        }
-        ~Chain()
-        {
-            FinalizeCount++;
-            //Debug.WriteLine(FinalizeCount);
         }
     }
 }

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Windows;
 using System.Diagnostics;
+using System.Threading;
+
 namespace CD2sol
 {
     public class OneFileConvert
@@ -40,6 +42,7 @@ namespace CD2sol
             if (Range < 2 || Range > Values.Count) Range = Values.Count;
             ViewModel.ProgressBarMaxValue = Values.Count / Range;
             int RangeNumber = 0;
+            SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(50);
             for (int index = 0; index < Values.Count; index += Range)
             {
                 if (index + Range > Values.Count)
