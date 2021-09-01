@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,7 +16,7 @@ namespace CD2sol
         private MainWindowViewModel Window;
         private List<int> IntList { get; set; }
         private Dictionary<Chain, List<Chain>> ChainsMinLength = new();
-        private Dictionary<List<int>, List<Chain>> BiggerThenMinLengthChains = new(new ListIntEqualityComparer());
+        private ConcurrentDictionary<List<int>, List<Chain>> BiggerThenMinLengthChains = new(new ListIntEqualityComparer());
         private int MinChainLenght;
         private int maxChainLenght;
         private int RangeNumber;
@@ -43,7 +44,7 @@ namespace CD2sol
             Task.WaitAll(WaitingList.ToArray());
             ChainsFieldsRecount();
             GetBestChains();
-
+            BiggerThenMinLengthChains.Clear();
             watch.Stop();
 
             Debug.WriteLine($"{watch.ElapsedMilliseconds}  -  {RangeNumber} ENDED");
@@ -56,16 +57,6 @@ namespace CD2sol
 
         private void GetBestChains()
         {
-            //foreach (var item in BiggerThenMinLengthChains)
-            //{
-            //    item.Value[0].EnterIndex = 0;
-            //    for (int i = 1; i < item.Value.Count; i++)
-            //    {
-            //        item.Value[i].EnterIndex = item.Value[i - 1].EnterIndex++;
-
-
-            //    }
-            //}
             List<List<int>> keys = BiggerThenMinLengthChains.Where(x => x.Value.Count > 0).Select(x => x.Key).OrderByDescending(x => x.Count).ToList(); /*  .Keys.OrderByDescending(x => x.Count).ToList();*/
             foreach (List<int> bigChainValue in keys)
             {
@@ -78,7 +69,7 @@ namespace CD2sol
                         foreach (Chain smallChain in smallChainList)
                         {
 
-                            if (smallChain.FirstElementIndex >= BigChain.FirstElementIndex & smallChain.LastElementIndex <= BigChain.LastElementIndex)
+                            if (smallChain.FirstElementIndex >= BigChain.FirstElementIndex & smallChain.LastElementIndex < BigChain.LastElementIndex)
                             {
 
                                 smallChain.ToDel = true;
@@ -95,10 +86,17 @@ namespace CD2sol
                 _ = item.Value.RemoveAll(x => x.ToDel == true);
             }
             List<List<int>> keysForDel = BiggerThenMinLengthChains.Where(x => x.Value.Count == 0).Select(x => x.Key).ToList();
-            foreach (var item in keysForDel)
+            List<Chain> val = new();
+            try
             {
-                BiggerThenMinLengthChains.Remove(item);
+                keysForDel.ForEach(key => BiggerThenMinLengthChains.Remove(key, out val));
             }
+            catch (Exception e)
+            {
+
+                MessageBox.Show("ОШИБКА");
+            }
+
             foreach (var item in BiggerThenMinLengthChains.Where(x => x.Value.Count != 0))
             {
                 foreach (var item2 in item.Value)
@@ -107,32 +105,65 @@ namespace CD2sol
                 }
             }
             BestChains = BestChains.OrderBy(x => x.FirstElementIndex).ToList();
-            for (int i = 0; i < BestChains.Count-1; i++)
-            {
-                if (BestChains[i].ToDel != true )
-                {
-                    if (BestChains[i].LastElementIndex > BestChains[i + 1].FirstElementIndex)
-                    {
-                        BestChains[i + 1].ToDel = true;
-                    }
-                }
+            DeleteByInsideRecursion();
+            //for (int i = 0; i < BestChains.Count - 1; i++)
+            //{
+            //    if (BestChains[i].ToDel != true)
+            //    {
+            //        if (BestChains[i].LastElementIndex > BestChains[i + 1].FirstElementIndex)
+            //        {
+            //            BestChains[i + 1].ToDel = true;
+            //        }
+            //    }
 
+            //}
+            //BestChains.RemoveAll(x => x.ToDel == true);
+        }
+        private void DeleteByInsideRecursion(int strtIndex = 0)
+        {
+            
+            while (strtIndex < BestChains.Count)
+            {
+                BestChains.RemoveAll(x => x.FirstElementIndex <= BestChains[strtIndex].LastElementIndex & x.FirstElementIndex >= BestChains[strtIndex].FirstElementIndex & x != BestChains[strtIndex]);
+                strtIndex++;
             }
-            BestChains.RemoveAll(x => x.ToDel == true);
+
         }
         private void ChainsFieldsRecount()
         {
-            _ = Parallel.ForEach(ChainsMinLength, x => BiggerThenMinLengthChains.Add(x.Key.Values, x.Value));
+
+            Parallel.ForEach(ChainsMinLength, x => BiggerThenMinLengthChains.TryAdd(x.Key.Values, x.Value));
             ChainsMinLength = null;
-            BiggerThenMinLengthChains = BiggerThenMinLengthChains.OrderBy(x => x.Key.Count).ToDictionary(x => x.Key, x => x.Value);
-            _ = Parallel.ForEach(BiggerThenMinLengthChains, x => { x.Value.OrderBy(z => z.FirstElementIndex).ToList(); });
-            _ = Parallel.ForEach(BiggerThenMinLengthChains, x =>
+
+
+
+            //try
+            //{
+            //    List<int> qq = new();
+            //    foreach (var item in BiggerThenMinLengthChains)
+            //    {
+            //        qq.Add(item.Key.Count);
+            //    }
+
+            //    //Debug.WriteLine(BiggerThenMinLengthChains.Count);
+
+
+            //}
+            //catch (Exception e)
+            //{
+
+            //    throw;
+            //}
+
+            foreach (var item2 in BiggerThenMinLengthChains)
             {
-                var currentKey = x.Key;
+                var currentKey = item2.Key;
                 for (int i = 1; i < BiggerThenMinLengthChains[currentKey].Count; i++)
                 {
+
                     Chain currChain = BiggerThenMinLengthChains[currentKey][i];
                     Chain prevChain = BiggerThenMinLengthChains[currentKey].LastOrDefault(x => x.LastElementIndex < currChain.FirstElementIndex);
+
                     if (currChain.Economy == null & prevChain != null)
                     {
                         if (prevChain.Economy == null) { prevChain.Economy = 0; prevChain.EnterIndex = 0; }
@@ -152,39 +183,77 @@ namespace CD2sol
 
 
                 }
-                BiggerThenMinLengthChains[currentKey].RemoveAll(x => x.Economy == 0 || x.Economy == null);
-            });
+                BiggerThenMinLengthChains[currentKey].RemoveAll(x => x.Economy <= 0 || x.Economy == null);
+            }
+
+            //Parallel.ForEach(BiggerThenMinLengthChains.ToList(), x =>
+            //{
+
+            //    var currentKey = x.Key;
+            //    for (int i = 1; i < BiggerThenMinLengthChains[currentKey].Count; i++)
+            //    {
+
+            //        Chain currChain = BiggerThenMinLengthChains[currentKey][i];
+            //        Chain prevChain = BiggerThenMinLengthChains[currentKey].LastOrDefault(x => x.LastElementIndex < currChain.FirstElementIndex);
+
+            //        if (currChain.Economy == null & prevChain != null)
+            //        {
+            //            if (prevChain.Economy == null) { prevChain.Economy = 0; prevChain.EnterIndex = 0; }
+            //            int firstItemsInBites = 0;
+            //            foreach (var item in BiggerThenMinLengthChains[currentKey][i].Values)
+            //            {
+            //                firstItemsInBites += BitCounter(item);
+            //            }
+
+            //            int firstItemRangeInBites = BitCounter(currChain.FirstElementIndex - prevChain.LastElementIndex);
+            //            int firstItemLengthInBites = BitCounter(currChain.Values.Count - 1);
+            //            currChain.Economy = firstItemsInBites - firstItemRangeInBites - firstItemLengthInBites;
+            //            currChain.PrevAddresRange = currChain.FirstElementIndex - prevChain.LastElementIndex;
+            //            currChain.PrevAddresLength = currChain.Values.Count;
+
+            //        }
+
+
+            //    }
+            //    BiggerThenMinLengthChains[currentKey].RemoveAll(x => x.Economy == 0 || x.Economy == null);
+
+
+            //});
+
+
+
+
         }
-        private void ChainsFieldsRecount2()
-        {
+        //private void ChainsFieldsRecount2()
+        //{
 
-            _ = Parallel.ForEach(ChainsMinLength, x => BiggerThenMinLengthChains.Add(x.Key.Values, x.Value));
-            ChainsMinLength = null;
-            BiggerThenMinLengthChains = BiggerThenMinLengthChains.OrderBy(x => x.Key.Count).ToDictionary(x => x.Key, x => x.Value);
-            _ = Parallel.ForEach(BiggerThenMinLengthChains, x => { x.Value.OrderBy(z => z.FirstElementIndex).ToList(); });
+        //    _ = Parallel.ForEach(ChainsMinLength, x => BiggerThenMinLengthChains.Add(x.Key.Values, x.Value));
+        //    ChainsMinLength = null;
+        //    BiggerThenMinLengthChains = BiggerThenMinLengthChains.OrderBy(x => x.Key.Count).ToDictionary(x => x.Key, x => x.Value);
+        //    _ = Parallel.ForEach(BiggerThenMinLengthChains, x => { x.Value.OrderBy(z => z.FirstElementIndex).ToList(); });
 
-            _ = Parallel.ForEach(BiggerThenMinLengthChains, x =>
-             {
-                 var currentKey = x.Key;
-                 for (int i = 1; i < BiggerThenMinLengthChains[currentKey].Count; i++)
-                 {
-                     var currentChain = BiggerThenMinLengthChains[currentKey][i];
-                     int firstItemsInBites = 0;
-                     foreach (var item in BiggerThenMinLengthChains[currentKey][i].Values)
-                     {
-                         firstItemsInBites += BitCounter(item);
-                     }
+        //    _ = Parallel.ForEach(BiggerThenMinLengthChains, x =>
+        //     {
+        //         var currentKey = x.Key;
+        //         for (int i = 1; i < BiggerThenMinLengthChains[currentKey].Count; i++)
+        //         {
+        //             var currentChain = BiggerThenMinLengthChains[currentKey][i];
+        //             int firstItemsInBites = 0;
+        //             foreach (var item in BiggerThenMinLengthChains[currentKey][i].Values)
+        //             {
+        //                 firstItemsInBites += BitCounter(item);
+        //             }
 
-                     int firstItemRangeInBites = BitCounter(currentChain.FirstElementIndex - BiggerThenMinLengthChains[currentKey][i - 1].LastElementIndex);
-                     int firstItemLengthInBites = BitCounter(currentChain.Values.Count - 1);
-                     currentChain.Economy = firstItemsInBites - firstItemRangeInBites - firstItemLengthInBites;
-                     currentChain.PrevAddresRange = currentChain.FirstElementIndex - BiggerThenMinLengthChains[currentKey][i - 1].LastElementIndex;
-                     currentChain.PrevAddresLength = currentChain.Values.Count;
-                 }
-                 BiggerThenMinLengthChains[currentKey].Remove(BiggerThenMinLengthChains[currentKey][0]);
+        //             int firstItemRangeInBites = BitCounter(currentChain.FirstElementIndex - BiggerThenMinLengthChains[currentKey][i - 1].LastElementIndex);
+        //             int firstItemLengthInBites = BitCounter(currentChain.Values.Count - 1);
+        //             currentChain.Economy = firstItemsInBites - firstItemRangeInBites - firstItemLengthInBites;
+        //             currentChain.PrevAddresRange = currentChain.FirstElementIndex - BiggerThenMinLengthChains[currentKey][i - 1].LastElementIndex;
+        //             currentChain.PrevAddresLength = currentChain.Values.Count;
+        //         }
+        //         BiggerThenMinLengthChains[currentKey].Remove(BiggerThenMinLengthChains[currentKey][0]);
 
-             });
-        }
+        //     });
+        //}
         static public int BitCounter(int value)
         {
             string binary = Convert.ToString(value, 2);
@@ -230,7 +299,7 @@ namespace CD2sol
                     }
                 }
             }
-
+            Parallel.ForEach(dict.Values, x => x = x.OrderBy(z => z.FirstElementIndex).ToList());
             Task tsk = new(() => { Task task = ChainProgression(dict.SelectMany(x => x.Value).ToList()); });
             lock (WaitingList)
             {

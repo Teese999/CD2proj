@@ -42,7 +42,47 @@ namespace CD2sol
             if (Range < 2 || Range > Values.Count) Range = Values.Count;
             ViewModel.ProgressBarMaxValue = Values.Count / Range;
             int RangeNumber = 0;
-            SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(50);
+            //List<OneRangeConvert> RangesList = new();
+            //for (int index = 0; index < Values.Count; index += Range)
+            //{
+            //    if (index + Range > Values.Count)
+            //    {
+            //        RangesList.Add(new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel));
+            //        ++RangeNumber;
+            //    }
+            //    else
+            //    {
+            //        RangesList.Add(new(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel));
+            //        ++RangeNumber;
+            //    }
+            //}
+            //using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(10))
+            //{
+
+
+            //    List<Task> tasks = new List<Task>();
+            //    foreach (var item in RangesList)
+            //    {
+            //        concurrencySemaphore.Wait();
+
+            //        var t = Task.Factory.StartNew(() =>
+            //        {
+            //            try
+            //            {
+            //                _ = item.Start();
+            //                Debug.WriteLine("=================thread start=================");
+            //            }
+            //            finally
+            //            {
+            //                _ = concurrencySemaphore.Release();
+            //            }
+            //        });
+
+            //        tasks.Add(t);
+            //    }
+
+            //    Task.WaitAll(tasks.ToArray());
+            //}
             for (int index = 0; index < Values.Count; index += Range)
             {
                 if (index + Range > Values.Count)
@@ -58,7 +98,7 @@ namespace CD2sol
                     ++RangeNumber;
                 }
             }
-            Task.WaitAll(ReturnedTasks.ToArray());
+            //Task.WaitAll(ReturnedTasks.ToArray());
         }
         private void TaskListToRangesList()
         {
@@ -70,7 +110,7 @@ namespace CD2sol
             }
         }
         private void StatistcCalculate()
-        { 
+        {
         }
         private void FileWrite()
         {
