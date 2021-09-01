@@ -80,7 +80,7 @@ namespace CD2sol
                 }
             }
             ///STATISTIC
-            Staticsitc.Set(Staticsitc.StatisticProp.Comparers, (int)Math.Pow(ChainsList.Count, 2));
+            //Staticsitc.Set(Staticsitc.StatisticProp.Comparers, (int)Math.Pow(ChainsList.Count, 2));
             ///STATISTIC
             return ChainsList.Where(x => x != null).Where(x => x.IsUnique == false).ToList();
         }

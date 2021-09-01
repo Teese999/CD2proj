@@ -33,7 +33,6 @@ namespace CD2sol
         {
             SendRangesToCount();
             TaskListToRangesList();
-            StatistcCalculate();
             FileWrite();
             return await Task.FromResult(true);
         }
@@ -42,63 +41,70 @@ namespace CD2sol
             if (Range < 2 || Range > Values.Count) Range = Values.Count;
             ViewModel.ProgressBarMaxValue = Values.Count / Range;
             int RangeNumber = 0;
-            //List<OneRangeConvert> RangesList = new();
-            //for (int index = 0; index < Values.Count; index += Range)
-            //{
-            //    if (index + Range > Values.Count)
-            //    {
-            //        RangesList.Add(new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel));
-            //        ++RangeNumber;
-            //    }
-            //    else
-            //    {
-            //        RangesList.Add(new(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel));
-            //        ++RangeNumber;
-            //    }
-            //}
-            //using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(10))
-            //{
-
-
-            //    List<Task> tasks = new List<Task>();
-            //    foreach (var item in RangesList)
-            //    {
-            //        concurrencySemaphore.Wait();
-
-            //        var t = Task.Factory.StartNew(() =>
-            //        {
-            //            try
-            //            {
-            //                _ = item.Start();
-            //                Debug.WriteLine("=================thread start=================");
-            //            }
-            //            finally
-            //            {
-            //                _ = concurrencySemaphore.Release();
-            //            }
-            //        });
-
-            //        tasks.Add(t);
-            //    }
-
-            //    Task.WaitAll(tasks.ToArray());
-            //}
+            List<OneRangeConvert> RangesList = new();
             for (int index = 0; index < Values.Count; index += Range)
             {
                 if (index + Range > Values.Count)
                 {
-                    OneRangeConvert tmpConvertLast = new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel);
-                    ReturnedTasks.Add(Task.Factory.StartNew(() => tmpConvertLast.Start()).Unwrap());
+                    RangesList.Add(new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel));
                     ++RangeNumber;
                 }
                 else
                 {
-                    OneRangeConvert tmpConvert = new OneRangeConvert(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel);
-                    ReturnedTasks.Add(Task.Factory.StartNew(() => tmpConvert.Start()).Unwrap());
+                    RangesList.Add(new(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel));
                     ++RangeNumber;
                 }
             }
+            using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(500))
+            {
+
+
+                List<Task> tasks = new List<Task>();
+                foreach (var item in RangesList)
+                {
+                    concurrencySemaphore.Wait();
+
+                    var t = Task.Factory.StartNew(() =>
+                    {
+                        try
+                        {
+                            
+                            item.Start();
+
+                            Debug.WriteLine($"============={item.RangeNumber}=============== ");
+                        }
+                        finally
+                        {
+                            _ = concurrencySemaphore.Release();
+                        }
+                    });
+
+                    tasks.Add(t);
+
+                }
+
+                Task.WaitAll(tasks.ToArray());
+                //Debug.WriteLine("STATS");
+                //Debug.WriteLine(Staticsitc.GetResultString());
+            }
+
+            //for (int index = 0; index < Values.Count; index += Range)
+            //{
+            //    if (index + Range > Values.Count)
+            //    {
+            //        OneRangeConvert tmpConvertLast = new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel);
+            //        ReturnedTasks.Add(Task.Factory.StartNew(() => tmpConvertLast.Start()).Unwrap());
+            //        ++RangeNumber;
+            //    }
+            //    else
+            //    {
+            //        OneRangeConvert tmpConvert = new OneRangeConvert(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel);
+            //        ReturnedTasks.Add(Task.Factory.StartNew(() => tmpConvert.Start()).Unwrap());
+            //        ++RangeNumber;
+            //    }
+            //}
             //Task.WaitAll(ReturnedTasks.ToArray());
+
         }
         private void TaskListToRangesList()
         {
@@ -108,9 +114,6 @@ namespace CD2sol
                                        item.Result.Item2,
                                        item.Result.Item3));
             }
-        }
-        private void StatistcCalculate()
-        {
         }
         private void FileWrite()
         {

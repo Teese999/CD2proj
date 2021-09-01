@@ -60,7 +60,7 @@ namespace CD2sol
         public List<(List<int>, string, string)> FilesWithInfo { get => _FilesWithInfo; set { _FilesWithInfo = value; OnPropertyChanged("FilesWithInfo"); } }
         public bool StatistickOn { get => _StatistickOn; set { _StatistickOn = value; OnPropertyChanged("StatistickOn"); } }
         public List<Task> FilesTasks { get => _FilesTasks; set { _FilesTasks = value; OnPropertyChanged("FilesTasks"); } }
-        public double Percent { get { return _Percent; } set { _Percent = value; OnPropertyChanged("Percent"); } }
+        public double Percent { get { return _Percent; } set { _Percent = Math.Round(value, 3); OnPropertyChanged("Percent"); } }
         public int ProgressBarMaxValue { get { return _ProgressBarMaxValue; } set { _ProgressBarMaxValue = value; OnPropertyChanged("ProgressBarMaxValue"); } }
         public int ProgressBarCurrentValue { get { return _ProgressBarCurrentValue; } set { _ProgressBarCurrentValue = value; OnPropertyChanged("ProgressBarCurrentValue"); } }
         #endregion

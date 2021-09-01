@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -9,13 +10,14 @@ namespace CD2sol
     public static class Staticsitc
     {
         #region Properties
-        private static int InputNumsCount { get; set; }
-        private static int OutputBestChainsCount { get; set; }
-        private static int SavingBits { get; set; }
-        private static int NumsWriting { get; set; }
-        private static int MaxChainLength { get; set; }
-        private static int MinChainLength { get; set; }
-        private static int Comparers { get; set; }
+        private static int InputNumsCount { get; set; } //Считано (чисел)
+        private static int NumsWriting { get; set; } //Записано (чисел):
+        private static int OutputBestChainsCount { get; set; } // Лучших цепей (шт
+        private static int SavingBits { get; set; } // Экономия (бит)
+
+        private static int MaxChainLength { get; set; } //Макс. цепь (чисел)
+        private static int MinChainLength { get; set; } //Мин. цепь (чисел):
+        private static Dictionary<int, int> FoundedChainsLength { get; set; } = new();
         #endregion
         #region PropertiesLockers
         private static object InputNumsCountLocker = new();
@@ -24,11 +26,16 @@ namespace CD2sol
         private static object NumsWritingLocker = new();
         private static object MaxChainLengthLocker = new();
         private static object MinChainLengthLocker = new();
-        private static object ComparersLocker = new();
         #endregion
         #region Methods
         public static string GetResultString()
         {
+            string dictionaryString = null;
+            FoundedChainsLength = FoundedChainsLength.OrderByDescending(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
+            foreach (var item in FoundedChainsLength)
+            {
+                dictionaryString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
+            }
             return
                     $"Cчитано (чисел): {InputNumsCount}" + Environment.NewLine +
                     $"Записано (чисел): {NumsWriting}" + Environment.NewLine +
@@ -36,9 +43,10 @@ namespace CD2sol
                     $"Экономия (бит): {SavingBits}" + Environment.NewLine +
                     $"Макс.цепь(чисел): {MaxChainLength}" + Environment.NewLine +
                     $"Мин.цепь(чисел): {MinChainLength}" + Environment.NewLine +
-                    $"Сравнения (шт): {Comparers}" + Environment.NewLine;
+                    dictionaryString;
+
         }
-        public async  static Task<bool> Plus(StatisticProp prop, int value)
+        public async static Task<bool> Plus(StatisticProp prop, int value)
         {
             Task task = Task.Run(() =>
             {
@@ -89,14 +97,6 @@ namespace CD2sol
                             lock (MinChainLengthLocker)
                             {
                                 MinChainLength += value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.Comparers:
-                        {
-                            lock (ComparersLocker)
-                            {
-                                Comparers += value;
                             }
                         }
                         break;
@@ -160,14 +160,6 @@ namespace CD2sol
                             }
                         }
                         break;
-                    case StatisticProp.Comparers:
-                        {
-                            lock (ComparersLocker)
-                            {
-                                Comparers++;
-                            }
-                        }
-                        break;
                     default:
                         break;
                 }
@@ -228,18 +220,40 @@ namespace CD2sol
                             }
                         }
                         break;
-                    case StatisticProp.Comparers:
-                        {
-                            lock (ComparersLocker)
-                            {
-                                Comparers = value;
-                            }
-                        }
-                        break;
                     default:
                         break;
                 }
             });
+        }
+        public static void LocalStatisticAdd(StatisticLocal stat)
+        {
+            InputNumsCount += stat.InputNumsCount;
+            NumsWriting += stat.NumsWriting;
+            OutputBestChainsCount += stat.OutputBestChainsCount;
+            SavingBits += stat.SavingBits;
+            if (stat.MaxChainLength > MaxChainLength)
+            {
+                MaxChainLength = stat.MaxChainLength;
+            }
+            if (stat.MinChainLength < MinChainLength)
+            {
+                MinChainLength = stat.MinChainLength;
+            }
+            if (MinChainLength == 0)
+            {
+                MinChainLength = stat.MinChainLength;
+
+            }
+            foreach (var item in stat.FoundedChainsLength)
+            {
+                lock (FoundedChainsLength)
+                {
+                    if (!FoundedChainsLength.TryAdd(item.Key, item.Value))
+                    {
+                        FoundedChainsLength[item.Key] += item.Value;
+                    }
+                }
+            }
         }
         public static void Reset()
         {
@@ -249,7 +263,6 @@ namespace CD2sol
             NumsWriting = 0;
             MaxChainLength = 0;
             MinChainLength = 0;
-            Comparers = 0;
         }
         #endregion
         public enum StatisticProp
@@ -259,12 +272,7 @@ namespace CD2sol
             SavingBits,
             NumsWriting,
             MaxChainLength,
-            MinChainLength,
-            Comparers
-        }
-        public static void test()
-        {
-            Comparers++;
+            MinChainLength
         }
     }
 }

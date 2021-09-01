@@ -13,6 +13,7 @@ namespace CD2sol
         public int NumsWriting { get; set; }
         public int MaxChainLength { get; set; }
         public int MinChainLength { get; set; }
-        public int Comparers { get; set; }
+        public Dictionary<int, int> FoundedChainsLength { get; set; } = new();
+
     }
 }
