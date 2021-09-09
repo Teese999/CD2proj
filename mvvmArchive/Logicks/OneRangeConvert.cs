@@ -52,7 +52,7 @@ namespace CD2sol
             //Window.ProgressBarCurrentValue++;
             //Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
 
-            return await Task.Run(() => (RangeNumber, GetString().Result, Stats));
+            return await Task.Run(() => (RangeNumber, GetString(), Stats));
         }
 
         private void GetBestChains()
@@ -180,10 +180,10 @@ namespace CD2sol
             Dictionary<List<int>, List<Chain>> dict = new(new ListIntEqualityComparer());
             foreach (var item in chainList)
             {
-                if (item == null)
-                {
-                    Debug.WriteLine("null");
-                }
+                //if (item == null)
+                //{
+                //    Debug.WriteLine("null");
+                //}
                 if (item.NextChain != null & item.Length + 1 <= maxChainLenght)
                 {
                     if (!dict.TryAdd(item.NextChain, new() { new Chain(item.Values.Count + 1, item.FirstElementIndex, IntList) }))
@@ -218,18 +218,40 @@ namespace CD2sol
                 }
                 //}
             }
-            Parallel.ForEach(dict.Values, x => x.RemoveAll(z => z == null));
+            //_ = Parallel.ForEach(dict.Values, x => x.RemoveAll(z => z == null));
+            //_ = Parallel.ForEach(dict.Values, x => x.RemoveAll(z => z.Values.Count == 0));
+            List<List<int>> KeysForDel = new();
+            foreach (var Key in dict.Keys)
+            {
+                if (dict[Key].Count == 0)
+                {
+                    KeysForDel.Add(Key);
 
-            Parallel.ForEach(dict.Values.ToList(), x => x = x.OrderBy(z => z.FirstElementIndex).ToList());
+                }
+                else if (dict[Key].Contains(null))
+                {
+                    dict[Key].Remove(null);
+                    dict[Key] = dict[Key].OrderBy(z => z.FirstElementIndex).ToList();
+                }
+            }
+            foreach (var item in KeysForDel)
+            {
+                dict.Remove(item);
+            }
+            //foreach (var item in dict.Values)
+            //{
+            //    if (item.Contains(null))
+            //    {
+            //        item.RemoveAll(x => x == null);
+            //    }
+            //    item.OrderBy(z => z.FirstElementIndex).ToList();
+            //}
+            //Parallel.ForEach(dict.Values.ToList(), x => x = x.OrderBy(z => z.FirstElementIndex).ToList());
 
 
 
             Task tsk = new(() => { Task task = ChainProgression(dict.SelectMany(x => x.Value).ToList()); });
 
-            //if (q.)
-            //{
-
-            //}
             lock (WaitingList)
             {
                 WaitingList.Add(tsk);
@@ -274,7 +296,7 @@ namespace CD2sol
             Stats.OutputBestChainsCount = BestChains.Count();
             ///STATISTIC
         }
-        private async Task<string> GetString()
+        private string GetString()
         {
             string ans = null;
 

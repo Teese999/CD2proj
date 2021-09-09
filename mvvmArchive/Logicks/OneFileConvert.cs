@@ -55,7 +55,7 @@ namespace CD2sol
                     ++RangeNumber;
                 }
             }
-            using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(500))
+            using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(100))
             {
 
 
@@ -68,8 +68,8 @@ namespace CD2sol
                     {
                         try
                         {
+                            ReturnedTasks.Add(item.Start());
                             
-                            item.Start();
 
                             Debug.WriteLine($"============={item.RangeNumber}=============== ");
                         }
