@@ -32,12 +32,15 @@ namespace CD2sol
         public async Task<bool> FileStartCalculate()
         {
             SendRangesToCount();
-            TaskListToRangesList();
             FileWrite();
             return await Task.FromResult(true);
         }
-        private void SendRangesToCount()
+        private async void SendRangesToCount()
         {
+            if (!Directory.Exists(Path + @"\\tmp"))
+            {
+                Directory.CreateDirectory(Path + @"\\tmp");
+            }
             if (Range < 2 || Range > Values.Count) Range = Values.Count;
             ViewModel.ProgressBarMaxValue = Values.Count / Range;
             int RangeNumber = 0;
@@ -46,19 +49,17 @@ namespace CD2sol
             {
                 if (index + Range > Values.Count)
                 {
-                    RangesList.Add(new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel));
+                    RangesList.Add(new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel, Path));
                     ++RangeNumber;
                 }
                 else
                 {
-                    RangesList.Add(new(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel));
+                    RangesList.Add(new(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel, Path));
                     ++RangeNumber;
                 }
             }
-            using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(100))
+            using (SemaphoreSlim concurrencySemaphore = new(300, 500))
             {
-
-
                 List<Task> tasks = new List<Task>();
                 foreach (var item in RangesList)
                 {
@@ -68,9 +69,7 @@ namespace CD2sol
                     {
                         try
                         {
-                            ReturnedTasks.Add(item.Start());
-                            
-
+                            ReturnedTasks.Add(item.StartAsync());
                             Debug.WriteLine($"============={item.RangeNumber}=============== ");
                         }
                         finally
@@ -82,51 +81,37 @@ namespace CD2sol
                     tasks.Add(t);
 
                 }
-
                 Task.WaitAll(tasks.ToArray());
-                //Debug.WriteLine("STATS");
-                //Debug.WriteLine(Staticsitc.GetResultString());
-            }
-
-            //for (int index = 0; index < Values.Count; index += Range)
-            //{
-            //    if (index + Range > Values.Count)
-            //    {
-            //        OneRangeConvert tmpConvertLast = new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel);
-            //        ReturnedTasks.Add(Task.Factory.StartNew(() => tmpConvertLast.Start()).Unwrap());
-            //        ++RangeNumber;
-            //    }
-            //    else
-            //    {
-            //        OneRangeConvert tmpConvert = new OneRangeConvert(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel);
-            //        ReturnedTasks.Add(Task.Factory.StartNew(() => tmpConvert.Start()).Unwrap());
-            //        ++RangeNumber;
-            //    }
-            //}
-            //Task.WaitAll(ReturnedTasks.ToArray());
-
-        }
-        private void TaskListToRangesList()
-        {
-            foreach (Task<(int, string, StatisticLocal)> item in ReturnedTasks)
-            {
-                ReturnedRanges.Add(new(item.Result.Item1,
-                                       item.Result.Item2,
-                                       item.Result.Item3));
             }
         }
-        private void FileWrite()
+        private async void FileWrite()
         {
-            GC.Collect(2);
-            GC.WaitForPendingFinalizers();
-            ReturnedRanges = ReturnedRanges.OrderBy(x => x.Item1).ToList();
+            string txt = null;
             using (StreamWriter sw = new StreamWriter(Path + "\\" + FileName, true, Encoding.UTF8))
             {
-                foreach (var item in ReturnedRanges)
+
+                List<int> files = new();
+                foreach (var file in Directory.GetFiles(Path + @"\\tmp"))
                 {
-                    sw.WriteLine(item.Item2);
+                    files.Add(Convert.ToInt32(System.IO.Path.GetFileName(file)));
+                    
                 }
+                ViewModel.ProgressBarMaxValue = files.Count();
+                ViewModel.ProgressBarCurrentValue = 0;
+                foreach (var fileName in files.OrderBy(x => x).ToList())
+                {
+                    StreamReader sr = new(Path + @"\\tmp" + $@"\{fileName}");
+                    
+                    sw.WriteLine(sr.ReadToEnd());
+                    sr.Close();
+                    ViewModel.ProgressBarCurrentValue++;
+                    ViewModel.Percent = ((double)ViewModel.ProgressBarCurrentValue / (double)ViewModel.ProgressBarMaxValue) * 100;
+                }
+
+
             }
+            Directory.Delete(Path + @"\\tmp", true); 
         }
+
     }
 }

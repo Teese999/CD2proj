@@ -148,6 +148,7 @@ namespace CD2sol
             Time = "0";
             StopWatch.Reset();
             Percent = 0;
+            Staticsitc.Reset();
         }
         private void FoldersPrepare()
         {
@@ -165,12 +166,7 @@ namespace CD2sol
             DirectoryInfo parentDir = Directory.GetParent(Path);
             if (Directory.Exists(parentDir + $@"\\{SelectedFolderName}"))
             {
-                var filesToDel = Directory.GetFiles(parentDir + $@"\\{SelectedFolderName}");
-                foreach (var item in filesToDel)
-                {
-                    File.Delete(item);
-                }
-                Directory.Delete(parentDir + $@"\\{SelectedFolderName}");
+                Directory.Delete(parentDir + $@"\\{SelectedFolderName}", true);
             }
             PathToWrite = parentDir.CreateSubdirectory(SelectedFolderName).FullName;
         }
