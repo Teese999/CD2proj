@@ -9,7 +9,7 @@ namespace CD2sol
 {
     public static class Staticsitc
     {
-        #region Properties
+        #region Properties  
         private static int InputNumsCount { get; set; } //Считано (чисел)
         private static int NumsWriting { get; set; } //Записано (чисел):
         private static int OutputBestChainsCount { get; set; } // Лучших цепей (шт
