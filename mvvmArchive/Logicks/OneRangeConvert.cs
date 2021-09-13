@@ -81,6 +81,10 @@ namespace CD2sol
 
             foreach (var item in BiggerThenMinLengthChains)
             {
+                if (Window.StatistickOn)
+                {
+                    Stats.DeletdChains.AddRange(item.Value.Where(x => x.ToDel == true));
+                }
                 _ = item.Value.RemoveAll(x => x.ToDel == true);
             }
             List<List<int>> keysForDel = BiggerThenMinLengthChains.Where(x => x.Value.Count == 0).Select(x => x.Key).ToList();
@@ -110,6 +114,10 @@ namespace CD2sol
 
             while (strtIndex < BestChains.Count)
             {
+                if (Window.StatistickOn)
+                {
+                    Stats.DeletdChains.AddRange(BestChains.Where(x => x.FirstElementIndex <= BestChains[strtIndex].LastElementIndex & x.FirstElementIndex >= BestChains[strtIndex].FirstElementIndex & x != BestChains[strtIndex]).ToList());
+                }
                 BestChains.RemoveAll(x => x.FirstElementIndex <= BestChains[strtIndex].LastElementIndex & x.FirstElementIndex >= BestChains[strtIndex].FirstElementIndex & x != BestChains[strtIndex]);
                 strtIndex++;
             }
@@ -160,7 +168,12 @@ namespace CD2sol
 
 
                 }
+                if (Window.StatistickOn)
+                {
+                    Stats.DeletdChains.AddRange(BiggerThenMinLengthChains[currentKey].Where(x => x.Economy <= 0 || x.Economy == null).ToList());
+                }
                 BiggerThenMinLengthChains[currentKey].RemoveAll(x => x.Economy <= 0 || x.Economy == null);
+
             }
         }
 
@@ -172,8 +185,6 @@ namespace CD2sol
         }
         private async Task ChainProgression(List<Chain> chainList)
         {
-
-            chainList.RemoveAll(x => x == null);
 
             Dictionary<List<int>, List<Chain>> dict = new(new ListIntEqualityComparer());
             foreach (var item in chainList)
@@ -188,6 +199,7 @@ namespace CD2sol
                     }
                 }
             }
+
             List<List<int>> ValuesCountBiggerThenOne = dict.Where(x => x.Value.Count < 2).Select(x => x.Key).ToList();
             if (ValuesCountBiggerThenOne.Count == chainList.Count)
             {
@@ -197,8 +209,12 @@ namespace CD2sol
 
             foreach (var item in ValuesCountBiggerThenOne)
             {
-
+                if (Window.StatistickOn)
+                {
+                    Stats.DeletdChains.AddRange(dict[item]);
+                }
                 dict.Remove(item);
+ 
 
             }
 
@@ -228,9 +244,13 @@ namespace CD2sol
                 }
             }
 
-            var forDel = tmpDict.Where(x => x.Value.Count < 2).ToList();
-            foreach (var item in forDel)
+            
+            foreach (var item in tmpDict.Where(x => x.Value.Count < 2).ToList())
             {
+                if (Window.StatistickOn)
+                {
+                    Stats.DeletdChains.AddRange(tmpDict[item.Key]);
+                }
                 tmpDict.Remove(item.Key);
             }
             return tmpDict;

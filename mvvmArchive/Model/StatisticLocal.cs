@@ -7,6 +7,7 @@ namespace CD2sol
 {
     public class StatisticLocal
     {
+
         public int InputNumsCount { get; set; }
         public int OutputBestChainsCount { get; set; }
         public int SavingBits { get; set; }
@@ -14,6 +15,6 @@ namespace CD2sol
         public int MaxChainLength { get; set; }
         public int MinChainLength { get; set; }
         public Dictionary<int, int> FoundedChainsLength { get; set; } = new();
-
+        public List<Chain> DeletdChains { get; set; } = new();
     }
 }

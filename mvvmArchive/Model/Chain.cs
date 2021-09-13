@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 namespace CD2sol
 {
-    class Chain
+    public class Chain
     {
         public Guid Id { get; set; }
         public int Length { get; set; }
