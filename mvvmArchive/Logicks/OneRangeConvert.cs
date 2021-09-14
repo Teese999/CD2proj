@@ -21,6 +21,7 @@ namespace CD2sol
         private int MinChainLenght;
         private int maxChainLenght;
         public int RangeNumber;
+        private List<Task> WaitingList = new();
         private List<Chain> BestChains = new();
         private StatisticLocal Stats = new();
         private string Path = null;
@@ -41,11 +42,14 @@ namespace CD2sol
 
 
             ChainsMinLength = GetDictUniqueChainsMinLength(MinChainLenght);
-            _ = Parallel.ForEach(ChainsMinLength, x => ChainProgression(x.Value));
+            _ = Parallel.ForEach(ChainsMinLength, x => ChainProgressionAsync(x.Value));
+            Task.WaitAll(WaitingList.ToArray());
             ChainsFieldsRecount();
             GetBestChains();
+            DeleteByInsideRecursion();
             BiggerThenMinLengthChains.Clear();
             GetString();
+         
             watch.Stop();
 
             //Debug.WriteLine($"{watch.ElapsedMilliseconds}  -  {RangeNumber} ENDED");
@@ -55,7 +59,7 @@ namespace CD2sol
 
         private void GetBestChains()
         {
-            List<List<int>> keys = BiggerThenMinLengthChains.Where(x => x.Value.Count > 0).Select(x => x.Key).OrderByDescending(x => x.Count).ToList(); /*  .Keys.OrderByDescending(x => x.Count).ToList();*/
+            List<List<int>> keys = BiggerThenMinLengthChains.Where(x => x.Value.Count > 0).Select(x => x.Key).OrderByDescending(x => x.Count).ToList();
             foreach (List<int> bigChainValue in keys)
             {
                 List<Chain> bigChainList = BiggerThenMinLengthChains[bigChainValue];
@@ -63,7 +67,7 @@ namespace CD2sol
                 {
                     foreach (List<int> smallChainValue in keys.Where(x => x.Count < bigChainValue.Count).ToList())
                     {
-                        List<Chain> smallChainList = BiggerThenMinLengthChains[smallChainValue];
+                        List<Chain> smallChainList = BiggerThenMinLengthChains[smallChainValue].Where(x => x.Economy != null & x.Economy > 0).ToList();
                         foreach (Chain smallChain in smallChainList)
                         {
 
@@ -83,21 +87,14 @@ namespace CD2sol
             {
                 if (Window.StatistickOn)
                 {
-                    Stats.DeletdChains.AddRange(item.Value.Where(x => x.ToDel == true));
+                    Stats.DeletedChainsAddList(item.Value.Where(x => x.ToDel == true).ToList());
                 }
                 _ = item.Value.RemoveAll(x => x.ToDel == true);
             }
             List<List<int>> keysForDel = BiggerThenMinLengthChains.Where(x => x.Value.Count == 0).Select(x => x.Key).ToList();
             List<Chain> val = new();
-            try
-            {
-                keysForDel.ForEach(key => BiggerThenMinLengthChains.Remove(key, out val));
-            }
-            catch (Exception e)
-            {
 
-                MessageBox.Show("ОШИБКА");
-            }
+            keysForDel.ForEach(key => BiggerThenMinLengthChains.Remove(key, out val));
 
             foreach (var item in BiggerThenMinLengthChains.Where(x => x.Value.Count != 0))
             {
@@ -107,7 +104,7 @@ namespace CD2sol
                 }
             }
             BestChains = BestChains.OrderBy(x => x.FirstElementIndex).ToList();
-            DeleteByInsideRecursion();
+
         }
         private void DeleteByInsideRecursion(int strtIndex = 0)
         {
@@ -116,7 +113,7 @@ namespace CD2sol
             {
                 if (Window.StatistickOn)
                 {
-                    Stats.DeletdChains.AddRange(BestChains.Where(x => x.FirstElementIndex <= BestChains[strtIndex].LastElementIndex & x.FirstElementIndex >= BestChains[strtIndex].FirstElementIndex & x != BestChains[strtIndex]).ToList());
+                    Stats.DeletedChainsAddList(BestChains.Where(x => x.FirstElementIndex <= BestChains[strtIndex].LastElementIndex & x.FirstElementIndex >= BestChains[strtIndex].FirstElementIndex & x != BestChains[strtIndex]).ToList());
                 }
                 BestChains.RemoveAll(x => x.FirstElementIndex <= BestChains[strtIndex].LastElementIndex & x.FirstElementIndex >= BestChains[strtIndex].FirstElementIndex & x != BestChains[strtIndex]);
                 strtIndex++;
@@ -125,20 +122,17 @@ namespace CD2sol
         }
         private void ChainsFieldsRecount()
         {
+            //if (Window.StatistickOn)
+            //{
+            //    foreach (var item in BiggerThenMinLengthChains)
+            //    {
+            //        Stats.PreparingChainsAddList(item.Value);
 
+            //    }
+
+            //}
             Parallel.ForEach(ChainsMinLength, x => BiggerThenMinLengthChains.TryAdd(x.Key.Values, x.Value));
-            if (Window.StatistickOn)
-            {
-                foreach (var item in BiggerThenMinLengthChains)
-                {
-                    if (!Stats.FoundedChainsLength.TryAdd(item.Key.Count, item.Value.Count))
-                    {
-                        Stats.FoundedChainsLength[item.Key.Count] += item.Value.Count;
-                    }
 
-                }
-
-            }
             ChainsMinLength = null;
             foreach (var item2 in BiggerThenMinLengthChains)
             {
@@ -170,7 +164,7 @@ namespace CD2sol
                 }
                 if (Window.StatistickOn)
                 {
-                    Stats.DeletdChains.AddRange(BiggerThenMinLengthChains[currentKey].Where(x => x.Economy <= 0 || x.Economy == null).ToList());
+                    Stats.DeletedChainsAddList(BiggerThenMinLengthChains[currentKey].Where(x => x.Economy <= 0 || x.Economy == null).ToList());
                 }
                 BiggerThenMinLengthChains[currentKey].RemoveAll(x => x.Economy <= 0 || x.Economy == null);
 
@@ -183,7 +177,7 @@ namespace CD2sol
             int ans = binary.Length;
             return ans;
         }
-        private async Task ChainProgression(List<Chain> chainList)
+        private async Task ChainProgressionAsync(List<Chain> chainList)
         {
 
             Dictionary<List<int>, List<Chain>> dict = new(new ListIntEqualityComparer());
@@ -206,30 +200,47 @@ namespace CD2sol
                 return;
             }
 
+            if (Window.StatistickOn)
+            {
+                foreach (var item in dict.Values)
+                {
+                    Stats.PreparingChainsAddList(item);
+                }
 
+            }
             foreach (var item in ValuesCountBiggerThenOne)
             {
-                if (Window.StatistickOn)
-                {
-                    Stats.DeletdChains.AddRange(dict[item]);
-                }
+
                 dict.Remove(item);
- 
+
 
             }
 
             foreach (var item in dict)
             {
-
-
                 if (!BiggerThenMinLengthChains.TryAdd(item.Key, item.Value))
                 {
                     BiggerThenMinLengthChains[item.Key].AddRange(item.Value);
                 }
             }
-            Task tsk = new(() => { Task task = ChainProgression(dict.Where(x => x.Value.Count > 0).SelectMany(x => x.Value).ToList()); });
-            tsk.Start();
-            tsk.Wait();
+
+            if (Window.StatistickOn)
+            {
+                Task tsk = new(() => { Task task = ChainProgressionAsync(dict.Where(x => x.Value.Count > 0).SelectMany(x => x.Value).ToList()); });
+                tsk.Start();
+                tsk.Wait();
+
+            }
+            else
+            {
+                Task tsk = new(() => { Task task = ChainProgressionAsync(dict.SelectMany(x => x.Value).ToList()); });
+                lock (WaitingList)
+                {
+                    WaitingList.Add(tsk);
+                }
+                tsk.Start();
+            }
+
         }
 
         private Dictionary<Chain, List<Chain>> GetDictUniqueChainsMinLength(int chainLength)
@@ -243,14 +254,18 @@ namespace CD2sol
                     tmpDict[newChain].Add(newChain);
                 }
             }
+            if (Window.StatistickOn)
+            {
+                foreach (var item in tmpDict.Values)
+                {
+                    Stats.PreparingChainsAddList(item);
+                }
 
-            
+            }
+
             foreach (var item in tmpDict.Where(x => x.Value.Count < 2).ToList())
             {
-                if (Window.StatistickOn)
-                {
-                    Stats.DeletdChains.AddRange(tmpDict[item.Key]);
-                }
+
                 tmpDict.Remove(item.Key);
             }
             return tmpDict;
@@ -258,14 +273,17 @@ namespace CD2sol
         private void StatisticCount()
         {
             ///STATISTIC
+            BestChains = BestChains.OrderBy(x => x.Length).ToList();
             Stats.NumsWriting += IntList.Count;
             Stats.InputNumsCount += IntList.Count;
             Stats.MinChainLength = BestChains[0].Length;
             Stats.MaxChainLength = BestChains[^1].Length;
             BestChains = BestChains.OrderByDescending(x => x.Length).ToList();
+            Stats.BestChainsAddList(BestChains);
             foreach (Chain bestChain in BestChains)
             {
                 Stats.SavingBits += bestChain.Economy.Value;
+                Stats.Coverage += bestChain.Length;
             }
             Stats.OutputBestChainsCount = BestChains.Count();
             ///STATISTIC
@@ -297,7 +315,7 @@ namespace CD2sol
             if (Window.StatistickOn)
             {
                 StatisticCount();
-                Staticsitc.LocalStatisticAdd(Stats);
+                Staticsitc.LocalStatisticCompare(Stats);
             }
             _ = File.WriteAllTextAsync(Path + @$"\{RangeNumber}", ans);
             ClearRange();
@@ -310,7 +328,6 @@ namespace CD2sol
             ChainsMinLength = null;
             BiggerThenMinLengthChains = null;
             BestChains = null;
-            Stats = null;
             Path = null;
         }
         ~OneRangeConvert()

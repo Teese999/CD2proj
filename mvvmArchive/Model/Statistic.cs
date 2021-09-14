@@ -12,225 +12,81 @@ namespace CD2sol
         #region Properties  
         private static int InputNumsCount { get; set; } //Считано (чисел)
         private static int NumsWriting { get; set; } //Записано (чисел):
-        private static int OutputBestChainsCount { get; set; } // Лучших цепей (шт
+        private static int OutputBestChainsCount { get; set; } // Лучших цепей (шт):
         private static int SavingBits { get; set; } // Экономия (бит)
-
         private static int MaxChainLength { get; set; } //Макс. цепь (чисел)
         private static int MinChainLength { get; set; } //Мин. цепь (чисел):
-        private static Dictionary<int, int> FoundedChainsLength { get; set; } = new();
-        #endregion
-        #region PropertiesLockers
-        private static object InputNumsCountLocker = new();
-        private static object OutputBestChainsCountLocker = new();
-        private static object SavingBitsLocker = new();
-        private static object NumsWritingLocker = new();
-        private static object MaxChainLengthLocker = new();
-        private static object MinChainLengthLocker = new();
+        private static int Coverage { get; set; } // Покрытие (%):
+        private static Dictionary<int, int> PreparingChains { get; set; } = new();
+        private static Dictionary<int, int> DeletedChains { get; set; } = new();
+        private static Dictionary<int, int> BestChains { get; set; } = new();
         #endregion
         #region Methods
         public static string GetResultString()
         {
-            string dictionaryString = null;
-            FoundedChainsLength = FoundedChainsLength.OrderByDescending(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
-            foreach (var item in FoundedChainsLength)
+
+
+            Coverage = Coverage * 100 / InputNumsCount;
+
+            #region PreparingChainsBlock
+            string PreparingChainsLengthString = Environment.NewLine + "Предварительные цепи [шт]:" + Environment.NewLine;
+            int PreparingChainsCount = 0;
+            int PreparingChainsValuesCount = 0;
+            PreparingChains = PreparingChains.OrderByDescending(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
+            foreach (var item in PreparingChains)
             {
-                dictionaryString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
+                PreparingChainsLengthString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
+                PreparingChainsCount += item.Value;
+                PreparingChainsValuesCount += item.Key * item.Value;
             }
+            PreparingChainsLengthString += $"Всего [цепи-чисел]: {PreparingChainsCount} - {PreparingChainsValuesCount}";
+
+            #endregion
+            #region DeletedChainsBlock
+            string DeletedChainsString = Environment.NewLine + "Все удаленные цепи" + Environment.NewLine;
+            int DeletedChainsCount = 0;
+            int DeletedChainsValuesCount = 0;
+            foreach (var item in DeletedChains)
+            {
+                DeletedChainsString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
+                DeletedChainsCount += item.Value;
+                DeletedChainsValuesCount += item.Key * item.Value;
+            }
+            DeletedChainsString += $"Всего [цепи-чисел]: {DeletedChainsCount} - {DeletedChainsValuesCount}";
+            #endregion
+            #region BestChainBlock
+            string BestChainsString = Environment.NewLine + "Окончательные положительные цепи [шт]:" + Environment.NewLine;
+            int BestChainsCount = 0;
+            int BestChainsValuesCount = 0;
+            foreach (var item in BestChains)
+            {
+                BestChainsString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
+                BestChainsCount += item.Value;
+                BestChainsValuesCount += item.Key * item.Value;
+            }
+            BestChainsString += $"Всего [цепи-чисел]: {BestChainsCount} - {BestChainsValuesCount}" + Environment.NewLine;
+            BestChainsString += $"Покрытие = {Coverage}%" + Environment.NewLine;
+            #endregion
+
             return
                     $"Cчитано (чисел): {InputNumsCount}" + Environment.NewLine +
                     $"Записано (чисел): {NumsWriting}" + Environment.NewLine +
                     $"Цепей (шт): {OutputBestChainsCount}" + Environment.NewLine +
-                    $"Экономия (бит): {SavingBits}" + Environment.NewLine +
                     $"Макс.цепь(чисел): {MaxChainLength}" + Environment.NewLine +
                     $"Мин.цепь(чисел): {MinChainLength}" + Environment.NewLine +
-                    dictionaryString;
+                    PreparingChainsLengthString + Environment.NewLine +
+                    DeletedChainsString + Environment.NewLine +
+                    BestChainsString + Environment.NewLine +
+                    $"Экономия [бит]: вес цепей – (вес расстояний + вес длин) = {SavingBits}";
 
         }
-        public async static Task<bool> Plus(StatisticProp prop, int value)
-        {
-            Task task = Task.Run(() =>
-            {
-                switch (prop)
-                {
-                    case StatisticProp.InputNumsCount:
-                        {
-                            lock (InputNumsCountLocker)
-                            {
-                                InputNumsCount += value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.OutputBestChainsCount:
-                        {
-                            lock (OutputBestChainsCountLocker)
-                            {
-                                OutputBestChainsCount += value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.SavingBits:
-                        {
-                            lock (SavingBitsLocker)
-                            {
-                                SavingBits += value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.NumsWriting:
-                        {
-                            lock (NumsWritingLocker)
-                            {
-                                NumsWriting += value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.MaxChainLength:
-                        {
-                            lock (MaxChainLengthLocker)
-                            {
-                                MaxChainLength += value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.MinChainLength:
-                        {
-                            lock (MinChainLengthLocker)
-                            {
-                                MinChainLength += value;
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            });
-            return await Task.FromResult(true);
-        }
-        public static async Task<bool> Plus(StatisticProp prop)
-        {
-            Task task = Task.Run(() =>
-            {
-                switch (prop)
-                {
-                    case StatisticProp.InputNumsCount:
-                        {
-                            lock (InputNumsCountLocker)
-                            {
-                                InputNumsCount++;
-                            }
-                        }
-                        break;
-                    case StatisticProp.OutputBestChainsCount:
-                        {
-                            lock (OutputBestChainsCountLocker)
-                            {
-                                OutputBestChainsCount++;
-                            }
-                        }
-                        break;
-                    case StatisticProp.SavingBits:
-                        {
-                            lock (SavingBitsLocker)
-                            {
-                                SavingBits++;
-                            }
-                        }
-                        break;
-                    case StatisticProp.NumsWriting:
-                        {
-                            lock (NumsWritingLocker)
-                            {
-                                NumsWriting++;
-                            }
-                        }
-                        break;
-                    case StatisticProp.MaxChainLength:
-                        {
-                            lock (MaxChainLengthLocker)
-                            {
-                                MaxChainLength++;
-                            }
-                        }
-                        break;
-                    case StatisticProp.MinChainLength:
-                        {
-                            lock (MinChainLengthLocker)
-                            {
-                                MinChainLength++;
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            });
-            return await Task.FromResult(true);
-        }
-        public static void Set(StatisticProp prop, int value)
-        {
-            Task task = Task.Run(() =>
-            {
-                switch (prop)
-                {
-                    case StatisticProp.InputNumsCount:
-                        {
-                            lock (InputNumsCountLocker)
-                            {
-                                InputNumsCount = value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.OutputBestChainsCount:
-                        {
-                            lock (OutputBestChainsCountLocker)
-                            {
-                                OutputBestChainsCount = value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.SavingBits:
-                        {
-                            lock (SavingBitsLocker)
-                            {
-                                SavingBits = value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.NumsWriting:
-                        {
-                            lock (NumsWritingLocker)
-                            {
-                                NumsWriting = value;
-                            }
-                        }
-                        break;
-                    case StatisticProp.MaxChainLength:
-                        {
-                            lock (MaxChainLengthLocker)
-                            {
-                                MaxChainLength = value;
-                            }
-                            break;
-                        }
-                    case StatisticProp.MinChainLength:
-                        {
-                            lock (MinChainLengthLocker)
-                            {
-                                MinChainLength = value;
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            });
-        }
-        public static void LocalStatisticAdd(StatisticLocal stat)
+        public static void LocalStatisticCompare(StatisticLocal stat)
         {
             InputNumsCount += stat.InputNumsCount;
             NumsWriting += stat.NumsWriting;
             OutputBestChainsCount += stat.OutputBestChainsCount;
             SavingBits += stat.SavingBits;
+            Coverage += stat.Coverage;
             if (stat.MaxChainLength > MaxChainLength)
             {
                 MaxChainLength = stat.MaxChainLength;
@@ -244,14 +100,36 @@ namespace CD2sol
                 MinChainLength = stat.MinChainLength;
 
             }
-            foreach (var item in stat.FoundedChainsLength)
+            foreach (var item in stat.PreparingChains)
             {
-                lock (FoundedChainsLength)
+                lock (PreparingChains)
                 {
-                    if (!FoundedChainsLength.TryAdd(item.Key, item.Value))
+                    if (!PreparingChains.TryAdd(item.Key, item.Value))
                     {
-                        FoundedChainsLength[item.Key] += item.Value;
+                        PreparingChains[item.Key] += item.Value;
                     }
+                }
+            }
+            foreach (var item in stat.DeletedChains)
+            {
+                if (DeletedChains.ContainsKey(item.Key))
+                {
+                    DeletedChains[item.Key] += item.Value;
+                }
+                else
+                {
+                    DeletedChains.Add(item.Key, item.Value);
+                }
+            }
+            foreach (var item in stat.BestChains)
+            {
+                if (BestChains.ContainsKey(item.Key))
+                {
+                    BestChains[item.Key] += item.Value;
+                }
+                else
+                {
+                    BestChains.Add(item.Key, item.Value);
                 }
             }
         }
