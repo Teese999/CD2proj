@@ -37,7 +37,7 @@ namespace CD2sol
         private Stopwatch _StopWatch = new();
         private string _Time;
         private List<(List<int>, string, string)> _FilesWithInfo = new List<(List<int>, string, string)>();
-        private static bool _StatistickOn;
+        private static bool _StatistickOn = false;
         private List<Task> _FilesTasks { get; set; } = new List<Task>();
         private double _Percent;
         private static int _ProgressBarMaxValue = 1;
@@ -112,6 +112,7 @@ namespace CD2sol
         }
         private async void StartLogic()
         {
+            int fileCounter = 0;
             _StopWatch.Start();
             _Timer.Start();
             Percent = 0;
@@ -120,26 +121,17 @@ namespace CD2sol
             FilesPrepare();
             await Task.Run(() =>
             {
-                Parallel.ForEach(FilesWithInfo, x => FilesTasks.Add(new OneFileConvert(x.Item1, x.Item2, x.Item3, this).FileStartCalculate()));
-                Task.WaitAll(FilesTasks.ToArray());
+
+                Parallel.ForEach(FilesWithInfo, x => { new OneFileConvert(x.Item1, x.Item2, x.Item3, this, fileCounter).FileStartCalculate();  fileCounter++; });
+ 
             });
-            _StopWatch.Stop();
-            _Timer.Stop();
-            if (StatistickOn)
-            {
-                _ = MessageBox.Show(Staticsitc.GetResultString());
-            }
-            else
-            {
-                _ = MessageBox.Show("Расчет выполнен!");
-            }
-            ClearProps();
+            
         }
         private void Cancel()
         {
             ClearProps();
         }
-        private void ClearProps()
+        public void ClearProps()
         {
             FilesTasks.Clear();
             FilesWithInfo.Clear();
@@ -167,6 +159,10 @@ namespace CD2sol
             if (Directory.Exists(parentDir + $@"\\{SelectedFolderName}"))
             {
                 Directory.Delete(parentDir + $@"\\{SelectedFolderName}", true);
+            }
+            if (Directory.Exists(System.IO.Path.GetTempPath() + $@"CD-2\"))
+            {
+                Directory.Delete(System.IO.Path.GetTempPath() + $@"CD-2\", true);
             }
             PathToWrite = parentDir.CreateSubdirectory(SelectedFolderName).FullName;
         }

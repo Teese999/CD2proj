@@ -15,6 +15,7 @@ namespace CD2sol
     class OneRangeConvert
     {
         private MainWindowViewModel Window;
+        public bool IsCompleted = false;
         private List<int> IntList { get; set; }
         private Dictionary<Chain, List<Chain>> ChainsMinLength = new();
         private ConcurrentDictionary<List<int>, List<Chain>> BiggerThenMinLengthChains = new(new ListIntEqualityComparer());
@@ -24,21 +25,23 @@ namespace CD2sol
         private List<Task> WaitingList = new();
         private List<Chain> BestChains = new();
         private StatisticLocal Stats = new();
+        private int FileCount { get; set; }
         private string Path = null;
-        public OneRangeConvert(List<int> _intList, int _minChainLenght, int _RangeNumber, MainWindowViewModel _Window, string _Path)
-        {
-            Path = _Path + @"\\tmp";
+        public OneRangeConvert(List<int> _intList, int _minChainLenght, int _RangeNumber, MainWindowViewModel _Window, string _Path, int _FileCount)
+        {          
             IntList = _intList;
             MinChainLenght = _minChainLenght;
             maxChainLenght = _intList.Count / 2;
             RangeNumber = _RangeNumber;
             Window = _Window;
+            FileCount = _FileCount;
+            Path = System.IO.Path.GetTempPath() + $@"CD-2\{FileCount}";
             //Debug.WriteLine($"{_RangeNumber} Started");
         }
         public async Task<bool> StartAsync()
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            Debug.WriteLine($"{RangeNumber} - STARTED");
+            //Debug.WriteLine($"{RangeNumber} - STARTED");
 
 
             ChainsMinLength = GetDictUniqueChainsMinLength(MinChainLenght);
@@ -47,14 +50,16 @@ namespace CD2sol
             ChainsFieldsRecount();
             GetBestChains();
             DeleteByInsideRecursion();
-            BiggerThenMinLengthChains.Clear();
+            BiggerThenMinLengthChains.Clear();           
+            IsCompleted = true;
             GetString();
-         
             watch.Stop();
 
+            return await Task.Run(() => true);
             //Debug.WriteLine($"{watch.ElapsedMilliseconds}  -  {RangeNumber} ENDED");
 
-            return await Task.Run(() => true);
+            //return await Task.Run(() => (RangeNumber, GetString(), Stats));
+            //return await Task.Run(() => (RangeNumber, GetString()));
         }
 
         private void GetBestChains()
@@ -122,15 +127,7 @@ namespace CD2sol
         }
         private void ChainsFieldsRecount()
         {
-            //if (Window.StatistickOn)
-            //{
-            //    foreach (var item in BiggerThenMinLengthChains)
-            //    {
-            //        Stats.PreparingChainsAddList(item.Value);
 
-            //    }
-
-            //}
             Parallel.ForEach(ChainsMinLength, x => BiggerThenMinLengthChains.TryAdd(x.Key.Values, x.Value));
 
             ChainsMinLength = null;
@@ -181,6 +178,7 @@ namespace CD2sol
         {
 
             Dictionary<List<int>, List<Chain>> dict = new(new ListIntEqualityComparer());
+            chainList.RemoveAll(x => x == null);
             foreach (var item in chainList)
             {
 
@@ -272,7 +270,6 @@ namespace CD2sol
         }
         private void StatisticCount()
         {
-            ///STATISTIC
             BestChains = BestChains.OrderBy(x => x.Length).ToList();
             Stats.NumsWriting += IntList.Count;
             Stats.InputNumsCount += IntList.Count;
@@ -286,9 +283,8 @@ namespace CD2sol
                 Stats.Coverage += bestChain.Length;
             }
             Stats.OutputBestChainsCount = BestChains.Count();
-            ///STATISTIC
         }
-        private void GetString()
+        public void GetString()
         {
             string ans = null;
 
@@ -310,16 +306,17 @@ namespace CD2sol
                 }
                 ans += $"{IntList[i]} {Environment.NewLine}";
             }
-            Window.ProgressBarCurrentValue++;
-            Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
+
             if (Window.StatistickOn)
             {
                 StatisticCount();
                 Staticsitc.LocalStatisticCompare(Stats);
             }
+            
             _ = File.WriteAllTextAsync(Path + @$"\{RangeNumber}", ans);
-            ClearRange();
-
+            Window.ProgressBarCurrentValue++;
+            Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
+            //ClearRange();
         }
         private void ClearRange()
         {
@@ -328,7 +325,6 @@ namespace CD2sol
             ChainsMinLength = null;
             BiggerThenMinLengthChains = null;
             BestChains = null;
-            Path = null;
         }
         ~OneRangeConvert()
         {
