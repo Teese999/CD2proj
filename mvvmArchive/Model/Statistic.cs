@@ -46,7 +46,7 @@ namespace CD2sol
             string DeletedChainsString = Environment.NewLine + "Все удаленные цепи" + Environment.NewLine;
             int DeletedChainsCount = 0;
             int DeletedChainsValuesCount = 0;
-            foreach (var item in DeletedChains)
+            foreach (var item in DeletedChains.OrderBy(x => x.Key))
             {
                 DeletedChainsString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
                 DeletedChainsCount += item.Value;

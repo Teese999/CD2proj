@@ -27,7 +27,8 @@ namespace CD2sol
         private StatisticLocal Stats = new();
         private int FileCount { get; set; }
         private string Path = null;
-        public OneRangeConvert(List<int> _intList, int _minChainLenght, int _RangeNumber, MainWindowViewModel _Window, string _Path, int _FileCount)
+        private ConcurrentBag<(int, string)> ReturnnedRanges { get; set; }
+        public OneRangeConvert(List<int> _intList, int _minChainLenght, int _RangeNumber, MainWindowViewModel _Window, string _Path, int _FileCount, ConcurrentBag<(int, string)> _ReturnedRannges)
         {          
             IntList = _intList;
             MinChainLenght = _minChainLenght;
@@ -36,12 +37,11 @@ namespace CD2sol
             Window = _Window;
             FileCount = _FileCount;
             Path = System.IO.Path.GetTempPath() + $@"CD-2\{FileCount}";
+            ReturnnedRanges = _ReturnedRannges;
             //Debug.WriteLine($"{_RangeNumber} Started");
         }
-        public async Task<bool> StartAsync()
+        public async Task<(string, int)> StartAsync()
         {
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-            //Debug.WriteLine($"{RangeNumber} - STARTED");
 
 
             ChainsMinLength = GetDictUniqueChainsMinLength(MinChainLenght);
@@ -50,16 +50,12 @@ namespace CD2sol
             ChainsFieldsRecount();
             GetBestChains();
             DeleteByInsideRecursion();
-            BiggerThenMinLengthChains.Clear();           
+            BiggerThenMinLengthChains.Clear();
             IsCompleted = true;
-            GetString();
-            watch.Stop();
+            
+            //return (GetString(), RangeNumber);
+            return await Task.Run(() => (GetString(), RangeNumber));
 
-            return await Task.Run(() => true);
-            //Debug.WriteLine($"{watch.ElapsedMilliseconds}  -  {RangeNumber} ENDED");
-
-            //return await Task.Run(() => (RangeNumber, GetString(), Stats));
-            //return await Task.Run(() => (RangeNumber, GetString()));
         }
 
         private void GetBestChains()
@@ -284,7 +280,7 @@ namespace CD2sol
             }
             Stats.OutputBestChainsCount = BestChains.Count();
         }
-        public void GetString()
+        public string GetString()
         {
             string ans = null;
 
@@ -312,10 +308,11 @@ namespace CD2sol
                 StatisticCount();
                 Staticsitc.LocalStatisticCompare(Stats);
             }
-            
-            _ = File.WriteAllTextAsync(Path + @$"\{RangeNumber}", ans);
-            Window.ProgressBarCurrentValue++;
-            Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
+            ReturnnedRanges.Add((RangeNumber, ans));
+            //_ = File.WriteAllTextAsync(Path + @$"\{RangeNumber}", ans);
+            //Window.ProgressBarCurrentValue++;
+            //Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
+            return ans;
             //ClearRange();
         }
         private void ClearRange()
@@ -326,9 +323,9 @@ namespace CD2sol
             BiggerThenMinLengthChains = null;
             BestChains = null;
         }
-        ~OneRangeConvert()
-        {
-            Debug.WriteLine($"{RangeNumber} -  ED");
-        }
+        //~OneRangeConvert()
+        //{
+        //    Debug.WriteLine($"{RangeNumber} -  ED");
+        //}
     }
 }

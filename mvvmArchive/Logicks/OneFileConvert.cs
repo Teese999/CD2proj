@@ -8,6 +8,7 @@ using System.Windows;
 using System.Diagnostics;
 using System.Threading;
 using System.Windows.Threading;
+using System.Collections.Concurrent;
 
 namespace CD2sol
 {
@@ -32,7 +33,7 @@ namespace CD2sol
         private int RangeNumber { get; set; } = 0;
         private List<int> Values { get; set; }
         private int FileCount { get; set; }
-        public List<(int, string)> ReturnedRanges { get; set; } = new();
+        public ConcurrentBag<(int, string)> ReturnedRanges { get; set; } = new();
         private List<OneRangeConvert> RangesList = new();
         public async void FileStartCalculate()
         {
@@ -50,7 +51,8 @@ namespace CD2sol
             ViewModel.Timer.Stop();
             if (ViewModel.StatistickOn)
             {
-                _ = MessageBox.Show(Staticsitc.GetResultString());
+                //_ = MessageBox.Show(Staticsitc.GetResultString());
+                Application.Current.Dispatcher.Invoke(() => { CD2sol.View.StatisticView statWindow = new(Staticsitc.GetResultString()); statWindow.ShowDialog(); });
             }
             else
             {
@@ -61,77 +63,61 @@ namespace CD2sol
         private async void SendRangesToCount()
         {
             if (Range < 2 || Range > Values.Count) Range = Values.Count;
-            ViewModel.ProgressBarMaxValue = Values.Count / Range;
+            //ViewModel.ProgressBarMaxValue = Values.Count / Range;
 
 
             for (int index = 0; index < Values.Count; index += Range)
             {
                 if (index + Range > Values.Count)
                 {
-                    RangesList.Add(new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel, Path, FileCount));
+                    //ViewModel.ProgressBarMaxValue++;
+                    RangesList.Add(new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel, Path, FileCount, ReturnedRanges));
                     ++RangeNumber;
                 }
                 else
                 {
-                    RangesList.Add(new(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel, Path, FileCount));
+                    RangesList.Add(new(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel, Path, FileCount, ReturnedRanges));
                     ++RangeNumber;
                 }
             }
 
+            int countOfDiapasons = 50;
+            while (RangesList.Count > 0)
+            {
+                if (countOfDiapasons > RangesList.Count)
+                {
+                    countOfDiapasons = RangesList.Count;
+                }
+                var ranges = RangesList.Take(countOfDiapasons);
 
-            //await Task.Run(() => FileWrite());
-            Task.Factory.StartNew(() => FileWrite()).ConfigureAwait(false);
-            //Dispatcher.CurrentDispatcher.BeginInvoke(() => FileWrite());
-            Parallel.ForEach(RangesList, x => x.StartAsync());
-            
+                Parallel.ForEach(ranges, x => x.StartAsync());
 
+
+                RangesList.RemoveRange(0, countOfDiapasons);
+
+                await Task.Run(() => FileWrite());
+
+
+
+            }
+            IsCompleted = true;
 
         }
-        //private void WritingMachine()
-        //{
-        //    new Thread(() =>
-        //    {
-        //        int currentWriteIndex = 0;
-
-        //        while (RangesList.Count > 0)
-        //        {
-        //            var CurrentRange = RangesList.First(x => x.RangeNumber == currentWriteIndex);
-        //            while (!CurrentRange.IsCompleted)
-        //            {
-        //                continue;
-        //            }
-        //            FileWrite(CurrentRange.GetString());
-        //            RangesList.Remove(CurrentRange);
-        //            CurrentRange = null;
-        //            currentWriteIndex++;
-        //        }
-        //        IsCompleted = true;
-        //    }).Start();
-
-        //}
-
         private void FileWrite()
         {
-            //Thread.Sleep(2000);
-            string txt = null;
-            int counter = 0;
-            while (counter <= Range)
+            var returnedRange = ReturnedRanges.OrderBy(x => x.Item1).ToList();
+            ReturnedRanges.Clear();
+
+            foreach (var item in returnedRange)
             {
-                if (/*Directory.Exists(System.IO.Path.GetTempPath() + $@"CD-2\") & */File.Exists(System.IO.Path.GetTempPath() + $@"CD-2\{FileCount}\{counter}"))
+                using (StreamWriter sw = new StreamWriter(Path + "\\" + FileName, true, Encoding.UTF8))
                 {
-                    using (StreamWriter sw = new StreamWriter(Path + "\\" + FileName, true, Encoding.UTF8))
-                    {
-                        StreamReader sr = new(System.IO.Path.GetTempPath() + $@"CD-2\{FileCount}\{counter}");
-                        sw.WriteLine(sr.ReadToEnd());
-                        sr.Close();
-                        File.Delete(System.IO.Path.GetTempPath() + $@"CD-2\{FileCount}\{counter}");
-                        counter++;
-                    }
+                    sw.WriteLine(item.Item2);
                 }
 
-                
             }
-            Directory.Delete(System.IO.Path.GetTempPath() + $@"CD-2\", true);
+
+
         }
     }
 }

@@ -121,7 +121,7 @@ namespace CD2sol
             FilesPrepare();
             await Task.Run(() =>
             {
-
+                //new Thread(() => Parallel.ForEach(FilesWithInfo, x => { new OneFileConvert(x.Item1, x.Item2, x.Item3, this, fileCounter).FileStartCalculate(); fileCounter++; }));
                 Parallel.ForEach(FilesWithInfo, x => { new OneFileConvert(x.Item1, x.Item2, x.Item3, this, fileCounter).FileStartCalculate();  fileCounter++; });
  
             });
@@ -160,10 +160,6 @@ namespace CD2sol
             {
                 Directory.Delete(parentDir + $@"\\{SelectedFolderName}", true);
             }
-            if (Directory.Exists(System.IO.Path.GetTempPath() + $@"CD-2\"))
-            {
-                Directory.Delete(System.IO.Path.GetTempPath() + $@"CD-2\", true);
-            }
             PathToWrite = parentDir.CreateSubdirectory(SelectedFolderName).FullName;
         }
         private void FilesPrepare()
@@ -190,9 +186,10 @@ namespace CD2sol
                 }
             }
         }
-        private void TimerTick(object sender, ElapsedEventArgs e)
+        private async void TimerTick(object sender, ElapsedEventArgs e)
         {
-            Time = StopWatch.Elapsed.ToString();
+            await Task.Run(() => Time = StopWatch.Elapsed.ToString());
+            //Time = StopWatch.Elapsed.ToString();
         }
         /// <summary>
         /// Activate all RelayCommas
