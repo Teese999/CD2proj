@@ -60,7 +60,7 @@ namespace CD2sol
         public List<(List<int>, string, string)> FilesWithInfo { get => _FilesWithInfo; set { _FilesWithInfo = value; OnPropertyChanged("FilesWithInfo"); } }
         public bool StatistickOn { get => _StatistickOn; set { _StatistickOn = value; OnPropertyChanged("StatistickOn"); } }
         public List<Task> FilesTasks { get => _FilesTasks; set { _FilesTasks = value; OnPropertyChanged("FilesTasks"); } }
-        public double Percent { get { return _Percent; } set { _Percent = Math.Round(value, 3); OnPropertyChanged("Percent"); } }
+        public double Percent { get { return _Percent; } set { _Percent = Math.Round(value, 0); OnPropertyChanged("Percent"); } }
         public int ProgressBarMaxValue { get { return _ProgressBarMaxValue; } set { _ProgressBarMaxValue = value; OnPropertyChanged("ProgressBarMaxValue"); } }
         public int ProgressBarCurrentValue { get { return _ProgressBarCurrentValue; } set { _ProgressBarCurrentValue = value; OnPropertyChanged("ProgressBarCurrentValue"); } }
         #endregion
@@ -120,12 +120,12 @@ namespace CD2sol
             FoldersPrepare();
             FilesPrepare();
             await Task.Run(() =>
-            {
-                //new Thread(() => Parallel.ForEach(FilesWithInfo, x => { new OneFileConvert(x.Item1, x.Item2, x.Item3, this, fileCounter).FileStartCalculate(); fileCounter++; }));
-                Parallel.ForEach(FilesWithInfo, x => { new OneFileConvert(x.Item1, x.Item2, x.Item3, this, fileCounter).FileStartCalculate();  fileCounter++; });
- 
-            });
-            
+           {
+               //new Thread(() => Parallel.ForEach(FilesWithInfo, x => { new OneFileConvert(x.Item1, x.Item2, x.Item3, this, fileCounter).FileStartCalculate(); fileCounter++; }));
+               _ = Parallel.ForEach(FilesWithInfo, x => { new OneFileConvert(x.Item1, x.Item2, x.Item3, this, fileCounter).FileStartCalculate(); fileCounter++; });
+
+           });
+
         }
         private void Cancel()
         {
@@ -149,7 +149,7 @@ namespace CD2sol
                 case "CD-2":
                     Files = Directory.EnumerateFiles(Path, "*", SearchOption.TopDirectoryOnly).ToList();
                     break;
-                case "CD-21":                   
+                case "CD-21":
                     Files = Directory.EnumerateFiles(Path, "*", SearchOption.AllDirectories).ToList();
                     break;
                 default:
@@ -158,7 +158,16 @@ namespace CD2sol
             DirectoryInfo parentDir = Directory.GetParent(Path);
             if (Directory.Exists(parentDir + $@"\\{SelectedFolderName}"))
             {
-                Directory.Delete(parentDir + $@"\\{SelectedFolderName}", true);
+                try
+                {
+                    Directory.Delete(parentDir + $@"\\{SelectedFolderName}", true);
+                }
+                catch (IOException)
+                {
+                    MessageBox.Show("Закройте блокнот и повторите расчет");
+                    
+                }
+                
             }
             PathToWrite = parentDir.CreateSubdirectory(SelectedFolderName).FullName;
         }
@@ -167,7 +176,7 @@ namespace CD2sol
             foreach (string filePath in Files)
             {
                 string FileName;
-                string[] readText = File.ReadAllLines(filePath);
+                string[] readText = File.ReadAllLines(filePath);                
                 FileName = $"{System.IO.Path.GetFileNameWithoutExtension(filePath)}" + "-out" + ".txt";
                 (List<int>, string, string) tmpFile = new(new List<int>(), PathToWrite, FileName);
                 FilesWithInfo.Add(tmpFile);
@@ -179,16 +188,28 @@ namespace CD2sol
                     }
                     catch (FormatException)
                     {
-                        System.Windows.MessageBox.Show($"Не корректные данные в файле \n{filePath} \n{item}");
-                        //Активирую интерфейс выбора
-                        return;
+                        if (item == "" || item == " ")
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            System.Windows.MessageBox.Show($"Не корректные данные в файле \n{filePath} \n{item}");
+                            //Активирую интерфейс выбора
+                            return;
+                        }
+                       
                     }
                 }
             }
         }
         private async void TimerTick(object sender, ElapsedEventArgs e)
         {
-            await Task.Run(() => Time = StopWatch.Elapsed.ToString());
+
+            //await Task.Run(() => Time = StopWatch.Elapsed==null?"": StopWatch.Elapsed.ToString("HH:mm"));
+            Task.Run(() => Time = String.Format("{0:00}:{1:00}:{2:00}",
+            StopWatch.Elapsed.Hours, StopWatch.Elapsed.Minutes, StopWatch.Elapsed.Seconds));
+
             //Time = StopWatch.Elapsed.ToString();
         }
         /// <summary>

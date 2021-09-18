@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,6 +26,8 @@ namespace CD2sol
         public static string GetResultString()
         {
 
+            var nfi = (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
+            nfi.NumberGroupSeparator = " ";
 
             Coverage = Coverage * 100 / InputNumsCount;
 
@@ -32,52 +35,51 @@ namespace CD2sol
             string PreparingChainsLengthString = Environment.NewLine + "Предварительные цепи [шт]:" + Environment.NewLine;
             int PreparingChainsCount = 0;
             int PreparingChainsValuesCount = 0;
-            PreparingChains = PreparingChains.OrderByDescending(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
-            foreach (var item in PreparingChains)
+            foreach (var item in PreparingChains.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value))
             {
                 PreparingChainsLengthString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
                 PreparingChainsCount += item.Value;
                 PreparingChainsValuesCount += item.Key * item.Value;
             }
-            PreparingChainsLengthString += $"Всего [цепи-чисел]: {PreparingChainsCount} - {PreparingChainsValuesCount}";
+            PreparingChainsLengthString += $"Всего [цепи-чисел]: {PreparingChainsCount.ToString("#,0", nfi)} - {PreparingChainsValuesCount.ToString("#,0", nfi)}";
 
             #endregion
             #region DeletedChainsBlock
             string DeletedChainsString = Environment.NewLine + "Все удаленные цепи" + Environment.NewLine;
             int DeletedChainsCount = 0;
             int DeletedChainsValuesCount = 0;
-            foreach (var item in DeletedChains.OrderBy(x => x.Key))
+            foreach (var item in DeletedChains.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value))
             {
                 DeletedChainsString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
                 DeletedChainsCount += item.Value;
                 DeletedChainsValuesCount += item.Key * item.Value;
             }
-            DeletedChainsString += $"Всего [цепи-чисел]: {DeletedChainsCount} - {DeletedChainsValuesCount}";
+            DeletedChainsString += $"Всего [цепи-чисел]: {DeletedChainsCount.ToString("#,0", nfi)} - {DeletedChainsValuesCount.ToString("#,0", nfi)}";
             #endregion
             #region BestChainBlock
             string BestChainsString = Environment.NewLine + "Окончательные положительные цепи [шт]:" + Environment.NewLine;
             int BestChainsCount = 0;
             int BestChainsValuesCount = 0;
-            foreach (var item in BestChains)
+            foreach (var item in BestChains.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value))
             {
                 BestChainsString += $"{item.Key}-к: {item.Value}" + Environment.NewLine;
                 BestChainsCount += item.Value;
                 BestChainsValuesCount += item.Key * item.Value;
             }
-            BestChainsString += $"Всего [цепи-чисел]: {BestChainsCount} - {BestChainsValuesCount}" + Environment.NewLine;
+            BestChainsString += $"Всего [цепи-чисел]: {BestChainsCount.ToString("#,0", nfi)} - {BestChainsValuesCount.ToString("#,0", nfi)}" + Environment.NewLine;
             BestChainsString += $"Покрытие = {Coverage}%" + Environment.NewLine;
             #endregion
 
             return
-                    $"Cчитано (чисел): {InputNumsCount}" + Environment.NewLine +
-                    $"Записано (чисел): {NumsWriting}" + Environment.NewLine +
-                    $"Цепей (шт): {OutputBestChainsCount}" + Environment.NewLine +
-                    $"Макс.цепь(чисел): {MaxChainLength}" + Environment.NewLine +
+                    $"Cчитано (чисел): {InputNumsCount.ToString("#,0", nfi)}" + Environment.NewLine +
+                    $"Записано (чисел): {NumsWriting.ToString("#,0", nfi)}" + Environment.NewLine +
+                    $"Цепей (шт): {OutputBestChainsCount.ToString("#,0", nfi)}" + Environment.NewLine +
+                    $"Макс.цепь(чисел): {MaxChainLength.ToString("#,0", nfi)}" + Environment.NewLine +
                     $"Мин.цепь(чисел): {MinChainLength}" + Environment.NewLine +
                     PreparingChainsLengthString + Environment.NewLine +
                     DeletedChainsString + Environment.NewLine +
                     BestChainsString + Environment.NewLine +
-                    $"Экономия [бит]: вес цепей – (вес расстояний + вес длин) = {SavingBits}";
+                    $"Экономия [бит]:  {SavingBits.ToString("#,0", nfi)}";
 
         }
         public static void LocalStatisticCompare(StatisticLocal stat)
@@ -141,16 +143,11 @@ namespace CD2sol
             NumsWriting = 0;
             MaxChainLength = 0;
             MinChainLength = 0;
+            Coverage = 0;
+            PreparingChains = new();
+            DeletedChains = new();
+            BestChains = new();
         }
         #endregion
-        public enum StatisticProp
-        {
-            InputNumsCount,
-            OutputBestChainsCount,
-            SavingBits,
-            NumsWriting,
-            MaxChainLength,
-            MinChainLength
-        }
     }
 }

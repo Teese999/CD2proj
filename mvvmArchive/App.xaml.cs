@@ -5,7 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-namespace mvvmArchive
+namespace CD2sol
 {
     /// <summary>
     /// Interaction logic for App.xaml
@@ -15,6 +15,9 @@ namespace mvvmArchive
         //protected override void OnStartup(StartupEventArgs e)
         //{
         //    MainWindowViewModel mv = new();
+        //    mvvmArchive.MainWindow view = new();
+        //    view.DataContext = mv;
+        //    Task.Run(() => view.Show());
         //}
     }
 }

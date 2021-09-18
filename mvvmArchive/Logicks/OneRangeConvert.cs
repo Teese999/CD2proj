@@ -15,7 +15,7 @@ namespace CD2sol
     class OneRangeConvert
     {
         private MainWindowViewModel Window;
-        public bool IsCompleted = false;
+        //public bool IsCompleted = false;
         private List<int> IntList { get; set; }
         private Dictionary<Chain, List<Chain>> ChainsMinLength = new();
         private ConcurrentDictionary<List<int>, List<Chain>> BiggerThenMinLengthChains = new(new ListIntEqualityComparer());
@@ -38,7 +38,7 @@ namespace CD2sol
             FileCount = _FileCount;
             Path = System.IO.Path.GetTempPath() + $@"CD-2\{FileCount}";
             ReturnnedRanges = _ReturnedRannges;
-            //Debug.WriteLine($"{_RangeNumber} Started");
+
         }
         public async Task<(string, int)> StartAsync()
         {
@@ -51,9 +51,9 @@ namespace CD2sol
             GetBestChains();
             DeleteByInsideRecursion();
             BiggerThenMinLengthChains.Clear();
-            IsCompleted = true;
+            //IsCompleted = true;
             
-            //return (GetString(), RangeNumber);
+            
             return await Task.Run(() => (GetString(), RangeNumber));
 
         }
@@ -310,8 +310,8 @@ namespace CD2sol
             }
             ReturnnedRanges.Add((RangeNumber, ans));
             //_ = File.WriteAllTextAsync(Path + @$"\{RangeNumber}", ans);
-            //Window.ProgressBarCurrentValue++;
-            //Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
+            Window.ProgressBarCurrentValue++;
+            Window.Percent = ((double)Window.ProgressBarCurrentValue / (double)Window.ProgressBarMaxValue) * 100;
             return ans;
             //ClearRange();
         }

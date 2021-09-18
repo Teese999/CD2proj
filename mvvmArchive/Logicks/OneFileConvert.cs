@@ -35,20 +35,24 @@ namespace CD2sol
         private int FileCount { get; set; }
         public ConcurrentBag<(int, string)> ReturnedRanges { get; set; } = new();
         private List<OneRangeConvert> RangesList = new();
+
         public async void FileStartCalculate()
         {
+            if (!File.Exists(Path + "\\" + FileName))
+            {
+                var myFile = File.Create(Path + "\\" + FileName);
+                myFile.Close();
+            }
+            //await Task.Run(() => SendRangesToCount());
+            Task.Factory.StartNew(() => SendRangesToCount());
+            //SendRangesToCount();
 
-            if (!Directory.Exists(System.IO.Path.GetTempPath() + $@"CD-2\{FileCount}"))
-            {
-                Directory.CreateDirectory(System.IO.Path.GetTempPath() + $@"CD-2\{FileCount}");
-            }
-            await Task.Run(() => SendRangesToCount());
-            while (!IsCompleted)
-            {
-                continue;
-            }
+        }
+        private void Endcounting()
+        {
             ViewModel.StopWatch.Stop();
             ViewModel.Timer.Stop();
+            ViewModel.Percent = 100;
             if (ViewModel.StatistickOn)
             {
                 //_ = MessageBox.Show(Staticsitc.GetResultString());
@@ -62,24 +66,27 @@ namespace CD2sol
         }
         private async void SendRangesToCount()
         {
+
             if (Range < 2 || Range > Values.Count) Range = Values.Count;
-            //ViewModel.ProgressBarMaxValue = Values.Count / Range;
+            ViewModel.ProgressBarMaxValue = Values.Count / Range;
 
 
             for (int index = 0; index < Values.Count; index += Range)
             {
                 if (index + Range > Values.Count)
                 {
-                    //ViewModel.ProgressBarMaxValue++;
+                    ViewModel.ProgressBarMaxValue++;
                     RangesList.Add(new(Values.GetRange(index, Values.Count - index), MinChainLength, RangeNumber, ViewModel, Path, FileCount, ReturnedRanges));
                     ++RangeNumber;
                 }
                 else
                 {
+
                     RangesList.Add(new(Values.GetRange(index, Range), MinChainLength, RangeNumber, ViewModel, Path, FileCount, ReturnedRanges));
                     ++RangeNumber;
                 }
             }
+
 
             int countOfDiapasons = 50;
             while (RangesList.Count > 0)
@@ -100,24 +107,21 @@ namespace CD2sol
 
 
             }
-            IsCompleted = true;
 
+            Endcounting();
         }
         private void FileWrite()
         {
             var returnedRange = ReturnedRanges.OrderBy(x => x.Item1).ToList();
             ReturnedRanges.Clear();
-
-            foreach (var item in returnedRange)
+            using (StreamWriter sw = new StreamWriter(Path + "\\" + FileName, true, Encoding.UTF8))
             {
-                using (StreamWriter sw = new StreamWriter(Path + "\\" + FileName, true, Encoding.UTF8))
+                foreach (var item in returnedRange)
                 {
                     sw.WriteLine(item.Item2);
                 }
 
             }
-
-
         }
     }
 }
