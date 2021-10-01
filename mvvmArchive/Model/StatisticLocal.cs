@@ -21,19 +21,22 @@ namespace CD2sol
         public void PreparingChainsAddList(List<Chain> chainList)
         {
 
-            if (chainList.Count != 0)
-            {
-                int key = chainList[0].Length;
-                int count = chainList.Count;
-                if (PreparingChains.ContainsKey(key))
+
+                if (chainList.Count != 0)
                 {
-                    PreparingChains[key] += count;
+                    int key = chainList[0].Length;
+                    int count = chainList.Count;
+                    if (PreparingChains.ContainsKey(key))
+                    {
+                        PreparingChains[key] += count;
+                    }
+                    else
+                    {
+                        PreparingChains.Add(key, count);
+                    }
                 }
-                else
-                {
-                    PreparingChains.Add(key, count);
-                }
-            }
+
+
 
 
 

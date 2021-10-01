@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace CD2sol
 {
-    class ArrayIntEqualityComparer : IEqualityComparer<int[]>
+    class ListIntEqualityComparer : IEqualityComparer<List<int>>
     {
-        public bool Equals(int[] x, int[] y)
+        public bool Equals(List<int> x, List<int> y)
         {
             if (x == null && y == null)
                 return true;
@@ -20,9 +21,9 @@ namespace CD2sol
             else
                 return false;
         }
-        public int GetHashCode([DisallowNull] int[] obj)
+        public int GetHashCode([DisallowNull] List<int> obj)
         {
-            int hc = obj.Length;
+            int hc = obj.Count;
             foreach (int val in obj)
             {
                 hc = unchecked(hc * 314159 + val);
