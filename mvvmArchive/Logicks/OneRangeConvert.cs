@@ -41,6 +41,10 @@ namespace CD2sol
         }
         public async Task<(string, int)> StartAsync()
         {
+            Maximiser maximiser;
+            if (Window.StatistickOn)  {  maximiser = new(IntList, Stats); }
+            else  { maximiser = new(IntList); }
+            IntList = maximiser.Start();
             ChainSearcher searcher = new(Window, IntList, MinChainLenght, MaxChainLenght, Stats);
             searcher.StartSearching();
 
